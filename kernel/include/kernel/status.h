@@ -1,13 +1,18 @@
 #ifndef _KERNEL_STATUS_H
 #define _KERNEL_STATUS_H
 
-#define EOK 0
-#define ERECOV 1
-#define EINVARG 2
-#define ENOMEM 3
-#define EHRDWRE 4
-#define EUNKNOWN 5
-#define ECORRUPT 6
-#define ETEST 7
+#define KRES int
+
+#define IS_ERROR(r) ((r) < 0)
+#define CHECK(r) { KRES _r = r; if IS_ERROR(_r) { res = _r; goto exit; } }
+
+#define RES_SUCCESS 0
+#define RES_INVARG 1
+#define RES_OVERFLOW 2
+#define RES_CORRUPT 4
+#define RES_NOMEM 5
+
+#define RES_EUNKNOWN 10 // TODO: remove
+#define RES_ETEST 11
 
 #endif

@@ -9,7 +9,7 @@ int e9_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
 {
     if (!cdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     (void)fg;
@@ -24,7 +24,7 @@ int e9_free(chardev_t *cdev)
 {
     if (!cdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     kfree(cdev);

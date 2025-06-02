@@ -302,7 +302,7 @@ int process_register(process_t *proc)
     for (tail = proc_head; tail->next != NULL; tail = tail->next);
     if (!tail)
     {
-        return -ECORRUPT;
+        return -RES_CORRUPT;
     }
 
     tail->next = proc;
@@ -314,12 +314,18 @@ int process_unregister(process_t *proc)
 {
     if (!proc_head)
     {
-        return -ECORRUPT;
+        return -RES_CORRUPT;
     }
 
     if (current_proc == proc)
     {
         current_proc = NULL;
+    }
+
+    if (proc_head == proc)
+    {
+        proc_head = proc->next;
+        return 0;
     }
 
     for (process_t *tail = proc_head; tail->next != NULL; tail = tail->next)
@@ -347,10 +353,10 @@ int process_unregister(process_t *proc)
 
     if (!proc_head)
     {
-        KPANIC("no process running");
+        PANIC("no process running");
     }
 
-    return -EINVARG; // not found
+    return -RES_INVARG; // not found
 }
 
 void task_execute(uint64_t rip, uint64_t rsp, uint64_t eflags, task_state_t *state);
@@ -359,7 +365,7 @@ int execute_next_process(void)
 {
     if (!proc_head)
     {
-        return -ECORRUPT;
+        return -RES_CORRUPT;
     }
 
     if (!current_proc)

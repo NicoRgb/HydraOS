@@ -148,7 +148,7 @@ int ps2_poll(inputpacket_t *packet, inputdev_t *idev)
 {
     if (!idev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (key_buffer_size <= 0)
@@ -169,7 +169,7 @@ int ps2_free(inputdev_t *idev)
 {
     if (!idev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     kfree(idev);

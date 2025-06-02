@@ -11,7 +11,7 @@ int stream_create_bidirectional(stream_t *stream, uint8_t flags, size_t size)
     stream->buffer = kmalloc(size);
     if (!stream->buffer)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     stream->size = 0;
@@ -28,7 +28,7 @@ int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_
     stream->node = vfs_open(path, open_action);
     if (!stream->node)
     {
-        return -ERECOV;
+        return -RES_EUNKNOWN;
     }
 
     return 0;
@@ -57,7 +57,7 @@ void stream_free(stream_t *stream)
     case STREAM_TYPE_DRIVER:
         break;
     default:
-        KPANIC("invalid stream type");
+        PANIC("invalid stream type");
         break;
     }
 }
@@ -66,7 +66,7 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
 {
     if (!stream || !data || !bytes_read)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     memset(data, 0, size);
@@ -88,7 +88,7 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
         int res = vfs_read(stream->node, size, data);
         if (res < 0)
         {
-            return -ERECOV;
+            return -RES_EUNKNOWN;
         }
 
         break;
@@ -113,13 +113,13 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
             // TODO: implement
             break;
         case DEVICE_TYPE_CHARDEV:
-            return -ERECOV;
+            return -RES_EUNKNOWN;
         default:
-            return -EINVARG;
+            return -RES_INVARG;
         }
         break;
     default:
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return 0;
@@ -129,7 +129,7 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
 {
     if (!stream || !data || !bytes_written)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     *bytes_written = 0;
@@ -147,7 +147,7 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
         int res = vfs_write(stream->node, size, data);
         if (res < 0)
         {
-            return -ERECOV;
+            return -RES_EUNKNOWN;
         }
 
         break;
@@ -172,13 +172,13 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
             break;
 
         case DEVICE_TYPE_INPUTDEV:
-            return -ERECOV;
+            return -RES_EUNKNOWN;
         default:
-            return -EINVARG;
+            return -RES_INVARG;
         }
         break;
     default:
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return 0;
@@ -204,13 +204,13 @@ int stream_clone(stream_t *src, stream_t *dest)
         break;
     case STREAM_TYPE_FILE:
         // TODO: implement
-        return -EINVARG;
+        return -RES_INVARG;
         break;
     case STREAM_TYPE_DRIVER:
         stream_create_driver(dest, src->flags, src->device);
         break;
     default:
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return 0;

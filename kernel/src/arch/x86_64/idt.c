@@ -44,7 +44,7 @@ int set_idt_gate(uint32_t ino, void (*handler)(void))
 {
     if (ino > 255)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     uint64_t offset = (uint64_t)handler;
@@ -112,7 +112,7 @@ void irq_handler(interrupt_frame_t *frame)
 {
     if (pml4_switch(kernel_pml4) < 0)
     {
-        KPANIC("failed to switch pml4");
+        PANIC("failed to switch pml4");
     }
 
     if (frame->int_no >= 40)
@@ -134,7 +134,7 @@ void irq_handler(interrupt_frame_t *frame)
 
     if (pml4_switch(proc->pml4) < 0)
     {
-        KPANIC("failed to switch pml4");
+        PANIC("failed to switch pml4");
     }
 }
 
@@ -172,7 +172,7 @@ void exception_handler(interrupt_frame_t *frame)
 {
     if (pml4_switch(kernel_pml4) < 0)
     {
-        KPANIC("failed to switch pml4");
+        PANIC("failed to switch pml4");
     }
 
     kprintf("\x1b[41mCPU exception triggered\n\n[Exception Info]\nType: %s\n", exception_names[frame->int_no]);
@@ -238,6 +238,6 @@ void exception_handler(interrupt_frame_t *frame)
 
     if (pml4_switch(proc->pml4) < 0)
     {
-        KPANIC("failed to switch pml4");
+        PANIC("failed to switch pml4");
     }
 }

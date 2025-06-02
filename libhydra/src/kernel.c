@@ -43,3 +43,8 @@ uint64_t syscall_ping(uint64_t pid)
 {
     return syscall(_SYSCALL_PING, pid, 0, 0, 0, 0, 0);
 }
+
+void syscall_exec(const uint8_t *path)
+{
+    syscall(_SYSCALL_EXEC, (uint64_t)path, 0, 0, 0, 0, 0);
+}

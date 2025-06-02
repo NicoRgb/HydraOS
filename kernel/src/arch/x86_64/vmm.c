@@ -12,7 +12,7 @@ int pml4_map(page_table_t *pml4, void *virt, void *phys, uint64_t flags)
 {
     if ((uintptr_t)virt % PAGE_SIZE != 0 || (uintptr_t)phys % PAGE_SIZE != 0)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     uint64_t virt_addr = (uint64_t)virt;
@@ -30,7 +30,7 @@ int pml4_map(page_table_t *pml4, void *virt, void *phys, uint64_t flags)
         pdpt = (page_table_t *)pmm_alloc();
         if (!pdpt)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
         memset(pdpt, 0, PAGE_SIZE);
         pml4->entries[pml4_index] = (uint64_t)pdpt | (PAGE_PRESENT | PAGE_USER | PAGE_WRITABLE);
@@ -43,7 +43,7 @@ int pml4_map(page_table_t *pml4, void *virt, void *phys, uint64_t flags)
         pd = (page_table_t *)pmm_alloc();
         if (!pd)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
         memset(pd, 0, PAGE_SIZE);
         pdpt->entries[pdpt_index] = (uint64_t)pd | (PAGE_PRESENT | PAGE_USER | PAGE_WRITABLE);
@@ -56,7 +56,7 @@ int pml4_map(page_table_t *pml4, void *virt, void *phys, uint64_t flags)
         pt = (page_table_t *)pmm_alloc();
         if (!pt)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
         memset(pt, 0, PAGE_SIZE);
         pd->entries[pd_index] = (uint64_t)pt | (PAGE_PRESENT | PAGE_USER | PAGE_WRITABLE);
@@ -76,7 +76,7 @@ int pml4_map_range(page_table_t *pml4, void *virt, void *phys, size_t num, uint6
 {
     if ((uintptr_t)virt % PAGE_SIZE != 0 || (uintptr_t)phys % PAGE_SIZE != 0)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     for (uintptr_t i = 0; i < num; i++)

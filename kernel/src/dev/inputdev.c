@@ -16,7 +16,7 @@ int inputdev_free_ref(inputdev_t *idev)
 {
     if (!idev || !idev->free)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (idev->references <= 1)
@@ -32,7 +32,7 @@ int inputdev_poll(inputpacket_t *packet, inputdev_t *idev)
 {
     if (!idev || !idev->poll)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return idev->poll(packet, idev);

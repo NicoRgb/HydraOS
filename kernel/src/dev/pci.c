@@ -70,7 +70,7 @@ static int add_pci_device(uint8_t bus, uint8_t device, uint8_t function)
         pci_devices = krealloc(pci_devices, pci_device_capacity_old, pci_device_capacity * sizeof(pci_device_t));
         if (!pci_devices)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
     }
 
@@ -141,7 +141,7 @@ int pci_init()
     pci_devices = kmalloc(pci_device_capacity * sizeof(pci_device_t));
     if (!pci_devices)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     for (uint16_t bus = 0; bus < MAX_BUS; bus++)

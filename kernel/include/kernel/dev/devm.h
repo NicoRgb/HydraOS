@@ -25,7 +25,7 @@ typedef struct
     };
 } device_handle_t;
 
-int init_devices(void);
+KRES init_devices(void);
 void free_devices(void);
 
 chardev_t *get_chardev(size_t index);

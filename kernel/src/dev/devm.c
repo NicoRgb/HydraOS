@@ -27,12 +27,12 @@ inputdev_t **inputdevs = NULL;
 size_t inputdevs_capacity = 0;
 size_t inputdevs_size = 0;
 
-static int init_char_devices(void)
+static KRES init_char_devices(void)
 {
     chardevs = kmalloc(sizeof(chardev_t *) * CHARDEVS_CAPACITY_INCREASE);
     if (!chardevs)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     chardevs_capacity = CHARDEVS_CAPACITY_INCREASE;
@@ -41,19 +41,19 @@ static int init_char_devices(void)
     chardevs[chardevs_size] = e9_create();
     if (!chardevs[chardevs_size])
     {
-        return -EUNKNOWN;
+        return -RES_EUNKNOWN;
     }
     chardevs_size++;
 
     return 0;
 }
 
-static int init_block_devices(void)
+static KRES init_block_devices(void)
 {
     blockdevs = kmalloc(sizeof(blockdev_t *) * BLOCKDEVS_CAPACITY_INCREASE);
     if (!blockdevs)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     blockdevs_capacity = BLOCKDEVS_CAPACITY_INCREASE;
@@ -62,12 +62,12 @@ static int init_block_devices(void)
     return 0;
 }
 
-static int init_input_devices(void)
+static KRES init_input_devices(void)
 {
     inputdevs = kmalloc(sizeof(inputdev_t *) * INPUTDEVS_CAPACITY_INCREASE);
     if (!inputdevs)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     inputdevs_capacity = INPUTDEVS_CAPACITY_INCREASE;
@@ -76,18 +76,18 @@ static int init_input_devices(void)
     inputdevs[inputdevs_size] = ps2_create();
     if (!inputdevs[inputdevs_size])
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
     inputdevs_size++;
 
     return 0;
 }
 
-static int try_init_char_device(pci_device_t *pci_dev)
+static KRES try_init_char_device(pci_device_t *pci_dev)
 {
     if (pci_dev->class_code != PCI_CLASS_DISPLAY_CONTROLLER)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (pci_dev->subclass_code == PCI_SUBCLASS_VGA_COMP_CONTROLLER)
@@ -101,7 +101,7 @@ static int try_init_char_device(pci_device_t *pci_dev)
         chardevs[chardevs_size] = vga_create();
         if (!chardevs[chardevs_size])
         {
-            return -EUNKNOWN;
+            return -RES_EUNKNOWN;
         }
         chardevs_size++;
         return 0;
@@ -110,11 +110,11 @@ static int try_init_char_device(pci_device_t *pci_dev)
     return 0;
 }
 
-static int try_init_block_device(pci_device_t *pci_dev)
+static KRES try_init_block_device(pci_device_t *pci_dev)
 {
     if (pci_dev->class_code != PCI_CLASS_MASS_STORAGE_CONTROLLER)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (pci_dev->subclass_code == PCI_SUBCLASS_IDE_CONTROLLER)
@@ -139,9 +139,9 @@ static int try_init_block_device(pci_device_t *pci_dev)
     return 0;
 }
 
-int init_devices(void)
+KRES init_devices(void)
 {
-    int status = init_char_devices();
+    KRES status = init_char_devices();
     if (status < 0)
     {
         return status;

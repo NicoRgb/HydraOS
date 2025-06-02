@@ -5,6 +5,10 @@
 
 #define MAX_LEVEL 12
 
+static uintptr_t heap_end = 0;
+static uintptr_t heap_base = 0;
+static page_table_t *heap_pml4 = NULL;
+
 typedef struct buddy_node
 {
     size_t size;
@@ -112,7 +116,7 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t size, size_t _alig
 {
     if (!kernel_pml4 || base == 0 || (size & (size - 1)) != 0 || (_alignment & (_alignment - 1)) != 0)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (_alignment < sizeof(buddy_node_t))
@@ -122,15 +126,19 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t size, size_t _alig
 
     if (((uintptr_t)base % _alignment) != 0)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
+
+    heap_base = base;
+    heap_end = base + size;
+    heap_pml4 = kernel_pml4;
 
     for (size_t i = 0; i < size / PAGE_SIZE; i++)
     {
         void *page = pmm_alloc();
         if (!page)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
 
         int status = pml4_map(kernel_pml4, (void *)(base + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
@@ -227,27 +235,64 @@ void buddy_node_coalescence(buddy_node_t *head, buddy_node_t *tail)
     }
 }
 
+int kmm_expand(size_t expand_size)
+{
+    expand_size = align_forward_size(expand_size, PAGE_SIZE);
+
+    for (size_t i = 0; i < expand_size / PAGE_SIZE; i++)
+    {
+        void *page = pmm_alloc();
+        if (!page)
+            return -RES_NOMEM;
+
+        int status = pml4_map(heap_pml4, (void *)(heap_end + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
+        if (status < 0)
+            return status;
+    }
+
+    buddy_node_t *new_node = (buddy_node_t *)heap_end;
+    new_node->size = expand_size;
+    new_node->free = true;
+
+    tail = buddy_node_next(new_node);
+    heap_end += expand_size;
+
+    buddy_node_coalescence(head, tail);
+
+    return 0;
+}
+
 void *buddy_allocator_alloc(size_t size)
 {
-    if (size != 0)
+    if (size == 0)
     {
-        size_t actual_size = buddy_node_size_required(size);
+        return NULL;
+    }
 
-        buddy_node_t *found = buddy_node_find_best(head, tail, actual_size);
+    size_t actual_size = buddy_node_size_required(size);
+
+    buddy_node_t *found = buddy_node_find_best(head, tail, actual_size);
+    if (!found)
+    {
+        buddy_node_coalescence(head, tail);
+        found = buddy_node_find_best(head, tail, actual_size);
+
         if (!found)
         {
-            // Try to coalesce all the free buddy blocks and then search again
-            buddy_node_coalescence(head, tail);
+            int status = kmm_expand(actual_size);
+            if (status < 0)
+            {
+                return NULL;
+            }
+
             found = buddy_node_find_best(head, tail, actual_size);
         }
+    }
 
-        if (found != NULL)
-        {
-            found->free = false;
-            return (void *)((char *)found + alignment);
-        }
-
-        // Out of memory (possibly due to too much internal fragmentation)
+    if (found != NULL)
+    {
+        found->free = false;
+        return (void *)((char *)found + alignment);
     }
 
     return NULL;
@@ -255,7 +300,12 @@ void *buddy_allocator_alloc(size_t size)
 
 void *kmalloc(size_t size)
 {
-    return buddy_allocator_alloc(size);
+    void *res = buddy_allocator_alloc(size);
+    if (res == NULL)
+    {
+        while (1);
+    }
+    return res;
 }
 
 void kfree(void *ptr)

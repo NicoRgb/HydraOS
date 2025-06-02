@@ -31,7 +31,7 @@ static void scheduler_handler(interrupt_frame_t *frame, uint32_t)
     proc->task->state.rsp = frame->rsp;
 
     execute_next_process();
-    KPANIC("failed to execute process");
+    PANIC("failed to execute process");
 }
 
 void scheduler_init(void)

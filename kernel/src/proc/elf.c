@@ -72,7 +72,7 @@ char *elf_str_table(Elf64_Ehdr *header)
 
 int elf_validate_loaded(Elf64_Ehdr *header)
 {
-    return (elf_valid_signature((char *)header) && elf_valid_class(header) && elf_valid_encoding(header) && elf_has_program_header(header) && elf_is_executable(header)) ? EOK : -ERECOV;
+    return (elf_valid_signature((char *)header) && elf_valid_class(header) && elf_valid_encoding(header) && elf_has_program_header(header) && elf_is_executable(header)) ? RES_SUCCESS : -RES_EUNKNOWN;
 }
 
 int elf_process_load(elf_file_t *elf_file)
@@ -85,7 +85,7 @@ int elf_process_load(elf_file_t *elf_file)
         return status;
     }
 
-    return EOK;
+    return RES_SUCCESS;
 }
 
 uint64_t elf_entry(elf_file_t *file)
@@ -156,7 +156,7 @@ static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint
 {
     if (!ph)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (ph->p_type != PT_LOAD)
@@ -175,7 +175,7 @@ static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint
         proc->data_pages[*data_pages_index] = pmm_alloc();
         if (!proc->data_pages[*data_pages_index])
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
 
         if (ph->p_memsz > ph->p_filesz)
@@ -245,7 +245,7 @@ int elf_load_and_map(process_t *proc, elf_file_t *elf_file)
     proc->data_pages = kmalloc(proc->num_data_pages * sizeof(void *));
     if (!proc->data_pages)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     uint64_t data_pages_index = 0;
@@ -280,7 +280,7 @@ int elf_load_and_map_copy(process_t *proc, elf_file_t *elf_file, process_t *orig
     proc->data_pages = kmalloc(proc->num_data_pages * sizeof(void *));
     if (!proc->data_pages)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     uint64_t data_pages_index = 0;

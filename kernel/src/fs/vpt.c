@@ -13,7 +13,7 @@ static int add_virtual_blockdev(virtual_blockdev_t *vbdev)
 {
     if (!vbdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (!vbdevs_head)
@@ -30,7 +30,7 @@ static int add_virtual_blockdev(virtual_blockdev_t *vbdev)
 
     if (!vbdev_entry)
     {
-        return -ECORRUPT;
+        return -RES_CORRUPT;
     }
 
     vbdev_entry->next = vbdev;
@@ -58,7 +58,7 @@ int scan_partition(blockdev_t *bdev)
         virtual_blockdev_t *vbdev = kmalloc(sizeof(virtual_blockdev_t));
         if (!vbdev)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
 
         vbdev->pt = NULL;
@@ -79,13 +79,13 @@ int scan_partition(blockdev_t *bdev)
     void *pt_data = pt->pt_init(bdev);
     if (!pt_data)
     {
-        return -EUNKNOWN;
+        return -RES_EUNKNOWN;
     }
 
     virtual_blockdev_t *vbdev = kmalloc(sizeof(virtual_blockdev_t));
     if (!vbdev)
     {
-        return -ENOMEM;
+        return -RES_NOMEM;
     }
 
     vbdev->pt = pt;
@@ -101,7 +101,7 @@ int scan_partition(blockdev_t *bdev)
         vbdev = kmalloc(sizeof(virtual_blockdev_t));
         if (!vbdev)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
     }
 
@@ -120,7 +120,7 @@ int free_virtual_blockdevs(blockdev_t *bdev)
 {
     if (!bdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     virtual_blockdev_t *vbdev = NULL;
@@ -164,7 +164,7 @@ int register_partition_table(partition_table_t *pt)
 {
     if (!pt)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (!partition_tables)
@@ -172,7 +172,7 @@ int register_partition_table(partition_table_t *pt)
         partition_tables = kmalloc(sizeof(partition_table_t *) * PARTITION_TABLES_CAPACITY_INCREASE);
         if (!partition_tables)
         {
-            return -ENOMEM;
+            return -RES_NOMEM;
         }
 
         partition_tables_capacity = PARTITION_TABLES_CAPACITY_INCREASE;

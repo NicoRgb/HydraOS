@@ -4,6 +4,8 @@ section .text
 %define STACK_SIZE (4096 * 4)
 
 global _start
+extern _init
+extern early_init
 extern kmain
 
 _start:
@@ -11,15 +13,27 @@ _start:
 
 section .multiboot
 
-%define MB_MAGIC 0xE85250D6
-%define MB_ARCH_I386 0
+; multiboot header
 
-align 8
+%define MB_MAGIC 0x1BADB002
+%define MB_FLAGS 0b000011 ; page align modules, provide memory information
+
 multiboot_header:
     dd MB_MAGIC
-    dd MB_ARCH_I386
-    dd .end - multiboot_header
-    dd -(MB_MAGIC + MB_ARCH_I386 + (.end - multiboot_header))
+    dd MB_FLAGS
+    dd -(MB_MAGIC + MB_FLAGS)
+
+; multiboot2 header
+
+%define MB2_MAGIC 0xE85250D6
+%define MB2_ARCH_I386 0
+
+align 8
+multiboot2_header:
+    dd MB2_MAGIC
+    dd MB2_ARCH_I386
+    dd .end - multiboot2_header
+    dd -(MB2_MAGIC + MB2_ARCH_I386 + (.end - multiboot2_header))
 
 align 8
 .align_tag_start:
@@ -43,11 +57,15 @@ multiboot_entry:
     push 0
     popfd
 
-    mov [multiboot2_structure], ebx
+    mov [multiboot_signature], eax
+    mov [multiboot_structure], ebx
 
     call check_multiboot2
     call check_cpuid
     call check_long_mode
+    
+    call check_sse
+    call enable_sse
 
     call setup_page_tables
     call switch_long_mode
@@ -91,6 +109,11 @@ print_msg:
 
 check_multiboot2:
     cmp eax, 0x36d76289
+    jne check_multiboot
+    ret
+
+check_multiboot:
+    cmp eax, 0x2BADB002
     jne .error
     ret
 .error:
@@ -135,6 +158,29 @@ check_long_mode:
     mov ebx, long_mode_err_msg
     call print_msg
     jmp halt
+
+check_sse:
+    mov eax, 0x01
+    cpuid
+    test edx, 1<<25
+    jz .no_sse
+
+    ret
+.no_sse:
+    mov ebx, sse_err_msg
+    call print_msg
+    jmp halt
+
+enable_sse:
+    mov eax, cr0
+    and ax, 0xFFFB
+    or ax, 0x02
+    mov cr0, eax
+    mov eax, cr4
+    or ax, 3<<9
+    mov cr4, eax
+
+    ret
 
 setup_page_tables:
     mov eax, page_table_l3
@@ -183,14 +229,37 @@ bits 64
 long_mode_start:
     cli
 
-    mov rdi, [multiboot2_structure]
+    mov rsp, stack + STACK_SIZE
+    mov rbp, rsp
+
+    call init_ssp
+
+    xor rbp, rbp ; important for stack tracing
+    mov rdi, [multiboot_signature]
+    mov rsi, [multiboot_structure]
+    call early_init
+
+    call _init ; global constructors
+
+    xor rbp, rbp
     call kmain
     
     cli
     hlt
 
+extern __stack_chk_guard
+init_ssp:
+    ; pseudo random number in rax
+    rdtsc
+    shl rdx, 32
+    or rax, rdx
+
+    mov qword [__stack_chk_guard], rax
+    ret
+
 section .data
-multiboot2_structure: dq 0
+multiboot_signature: dd 0
+multiboot_structure: dq 0
 
 section .rodata
 PRESENT        equ 1 << 7
@@ -223,9 +292,10 @@ gdt:
         dw $ - gdt - 1
         dq gdt
 
-mb_err_msg: db "error: multiboot2 boot failed... halting", 0
+mb_err_msg: db "error: boot failed... halting", 0
 cpuid_err_msg: db "error: no cpuid... halting", 0
 long_mode_err_msg: db "error: no long mode... halting", 0
+sse_err_msg: db "error: no sse... halting", 0
 
 section .bss
 align 4096

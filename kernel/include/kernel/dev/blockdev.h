@@ -28,10 +28,10 @@ typedef struct _blockdev
 } blockdev_t;
 
 blockdev_t *blockdev_new_ref(blockdev_t *bdev);
-int blockdev_free_ref(blockdev_t *bdev);
+KRES blockdev_free_ref(blockdev_t *bdev);
 
-int blockdev_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev);
-int blockdev_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev);
-int blockdev_eject(blockdev_t *bdev);
+KRES blockdev_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev);
+KRES blockdev_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev);
+KRES blockdev_eject(blockdev_t *bdev);
 
 #endif

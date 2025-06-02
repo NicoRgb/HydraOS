@@ -52,7 +52,7 @@ int vga_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
 {
     if (!cdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     uint8_t color = (fg & 0x0F) | (bg << 4);
@@ -95,7 +95,7 @@ int vga_free(chardev_t *cdev)
 {
     if (!cdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     kfree(cdev);

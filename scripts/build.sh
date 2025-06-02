@@ -13,10 +13,12 @@ mkdir -p /tmp/hydra_root/bin
 mkdir -p /tmp/hydra_root/lib
 mkdir -p /tmp/hydra_root/include
 
-pushd ../bootloader
-    echo "Compiling Bootloader"
-    make all
-popd
+if [[ $HYDRAOS_BOOT_SYSTEM != 'GRUB' ]]; then
+    pushd ../bootloader
+        echo "Compiling Bootloader"
+        make all
+    popd
+fi
 
 pushd ../kernel
     echo "Compiling Kernel"

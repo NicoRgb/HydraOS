@@ -32,8 +32,8 @@ typedef struct _chardev
 } chardev_t;
 
 chardev_t *chardev_new_ref(chardev_t *cdev);
-int chardev_free_ref(chardev_t *cdev);
+KRES chardev_free_ref(chardev_t *cdev);
 
-int chardev_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev);
+KRES chardev_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev);
 
 #endif

@@ -12,11 +12,11 @@ blockdev_t *blockdev_new_ref(blockdev_t *bdev)
     return bdev;
 }
 
-int blockdev_free_ref(blockdev_t *bdev)
+KRES blockdev_free_ref(blockdev_t *bdev)
 {
     if (!bdev || !bdev->free)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     if (bdev->references <= 1)
@@ -28,31 +28,31 @@ int blockdev_free_ref(blockdev_t *bdev)
     return 0;
 }
 
-int blockdev_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev)
+KRES blockdev_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev)
 {
     if (!bdev || !bdev->read_block)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return bdev->read_block(lba, data, bdev);
 }
 
-int blockdev_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
+KRES blockdev_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
 {
     if (!bdev || !bdev->write_block)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return bdev->write_block(lba, data, bdev);
 }
 
-int blockdev_eject(blockdev_t *bdev)
+KRES blockdev_eject(blockdev_t *bdev)
 {
     if (!bdev || !bdev->eject || bdev->type != BLOCKDEV_TYPE_REMOVABLE)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     return bdev->eject(bdev);

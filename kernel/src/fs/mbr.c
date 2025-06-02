@@ -53,7 +53,7 @@ int mbr_free(blockdev_t *bdev, void *mbr_data)
 {
     if (!bdev || !mbr_data)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     kfree(mbr_data);
@@ -66,12 +66,12 @@ int mbr_test(blockdev_t *bdev)
     master_boot_record_t mbr;
     if (blockdev_read_block(0, (uint8_t *)&mbr, bdev) < 0)
     {
-        return -ETEST;
+        return -RES_ETEST;
     }
 
     if (mbr.magic_number != 0xAA55)
     {
-        return -ETEST;
+        return -RES_ETEST;
     }
 
     return 0;
@@ -81,13 +81,13 @@ int mbr_get(uint8_t index, void *mbr_data, virtual_blockdev_t *vbdev)
 {
     if (!mbr_data || !vbdev)
     {
-        return -EINVARG;
+        return -RES_INVARG;
     }
 
     master_boot_record_t *mbr = (master_boot_record_t *)mbr_data;
     if (index >= 4 || mbr->primary_partitions[index].parititon_type == 0x00)
     {
-        return -ERECOV;
+        return -RES_EUNKNOWN;
     }
 
     vbdev->lba_offset = (size_t)mbr->primary_partitions[index].start_lba;
