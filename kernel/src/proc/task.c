@@ -319,7 +319,11 @@ int process_unregister(process_t *proc)
 
     if (current_proc == proc)
     {
-        current_proc = NULL;
+        current_proc = proc_head;
+        if (proc_head == proc)
+        {
+            current_proc = proc_head->next;
+        }
     }
 
     if (proc_head == proc)

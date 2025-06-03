@@ -197,6 +197,9 @@ exit:
     return res;
 }
 
+extern int __kernel_start;
+extern int __kernel_end;
+
 page_table_t *kernel_pml4 = NULL;
 
 void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_structure)
@@ -218,6 +221,11 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
     if (IS_ERROR(pmm_init(boot_info.memory_map, boot_info.num_mmap_entries, boot_info.total_memory))) // TODO: 64 bit address range
     {
         PANIC("failed to initialize page allocation");
+    }
+
+    for (uintptr_t i = (uintptr_t)&__kernel_start; i < (uintptr_t)&__kernel_end; i += PAGE_SIZE)
+    {
+        pmm_reserve((uint64_t *)i);
     }
 
     kernel_pml4 = pmm_alloc();

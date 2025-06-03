@@ -85,6 +85,11 @@ out:
     return res;
 }
 
+void pmm_reserve(uint64_t *page)
+{
+    bit_set(page_allocator.bitmap, (uintptr_t)page / PAGE_SIZE);
+}
+
 void *pmm_alloc(void)
 {
     for (uint64_t i = page_allocator.last_index; i < page_allocator.num_pages; i++)
@@ -98,6 +103,7 @@ void *pmm_alloc(void)
         return (void *)(i * PAGE_SIZE);
     }
 
+    PANIC("page allocation failed");
     return NULL;
 }
 

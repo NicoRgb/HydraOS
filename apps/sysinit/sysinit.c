@@ -23,11 +23,12 @@ int64_t start_shell(void)
 
 int main(void)
 {
-    int64_t pid = start_shell();
-    while (syscall_ping(pid) != pid)
+    while (1)
     {
+        int64_t pid = start_shell();
+        while (syscall_ping(pid) == pid);
+
         fputs("SYSINIT -- INFO -- STARTING NEW SHELL\n", stdout);
-        pid = start_shell();
     }
 
     return 1;

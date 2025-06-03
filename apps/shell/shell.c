@@ -44,7 +44,7 @@ int64_t start_process(const char *path)
         syscall_exec(path);
 
         fputs("Failed to execute process\n", stdout);
-        syscall_exit(1);
+        return -1;
     }
 
     return pid;
@@ -64,6 +64,11 @@ int main(void)
         }
 
         int64_t pid = start_process(line);
+        if (pid < 0)
+        {
+            continue;
+        }
+
         while (syscall_ping(pid) == pid);
     }
 

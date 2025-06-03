@@ -93,6 +93,8 @@ int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_
         return pid;
     }
 
+    kprintf("PING NOT RESOLVED\n");
+
     return 0;
 }
 
@@ -101,24 +103,26 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t, int64_t, int64_t, 
     const char *path = process_get_pointer(proc, (uintptr_t)_path);
     uint64_t pid = proc->pid;
 
-    process_unregister(proc);
-    process_free(proc);
-
     process_t *exec = process_create(path);
     if (!exec)
     {
-        PANIC("failed to create process");
+        return -RES_EUNKNOWN;
     }
 
     exec->pid = pid;
+    
+    process_unregister(proc);
+    process_free(proc);
 
-    if (process_register(exec) < 0)
+    if (IS_ERROR(process_register(exec)))
     {
         PANIC("failed to register process");
     }
 
     execute_next_process();
     PANIC("failed to execute process");
+
+    return 0;
 }
 
 extern page_table_t *kernel_pml4;

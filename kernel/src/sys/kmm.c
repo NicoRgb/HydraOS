@@ -303,7 +303,7 @@ void *kmalloc(size_t size)
     void *res = buddy_allocator_alloc(size);
     if (res == NULL)
     {
-        while (1);
+        PANIC("no more heap in kernel");
     }
     return res;
 }
