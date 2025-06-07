@@ -78,7 +78,7 @@ int main(void)
         int64_t pid = start_process(line);
         if (pid < 0)
         {
-            continue;
+            return 1;
         }
 
         while (syscall_ping(pid) == pid);

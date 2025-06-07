@@ -173,7 +173,7 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         res = syscall_exec(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
     case 6:
-        visualize_buddy_tree();
+        print_processes();
         break;
     default:
         break;

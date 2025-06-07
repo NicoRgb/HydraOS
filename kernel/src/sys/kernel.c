@@ -341,6 +341,7 @@ void kmain()
     {
         PANIC("failed to load '0:/bin/sysinit'");
     }
+
     if (process_register(proc) < 0)
     {
         PANIC("failed to register process");

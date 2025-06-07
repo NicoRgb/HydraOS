@@ -8,11 +8,17 @@
 
 #define BUDDY_FLAG_USED 1
 
-typedef struct
+#define MAX_ORDER 16
+
+typedef struct buddy_header
 {
     size_t size;
     uint8_t flags;
+    struct buddy_header *next;
+    struct buddy_header *prev;
 } buddy_header_t;
+
+buddy_header_t *free_lists[MAX_ORDER] = {0};
 
 buddy_header_t *get_next_buddy(buddy_header_t *header)
 {
@@ -40,26 +46,81 @@ bool buddy_is_free(buddy_header_t *buddy)
     return (buddy->flags & BUDDY_FLAG_USED) != BUDDY_FLAG_USED;
 }
 
+int size_to_order(size_t size)
+{
+    size_t normalized = size < MIN_BUDDY_SIZE ? MIN_BUDDY_SIZE : size;
+    int order = 0;
+    while ((MIN_BUDDY_SIZE << order) < normalized && order < MAX_ORDER - 1)
+    {
+        order++;
+    }
+    return order;
+}
+
+size_t order_to_size(int order)
+{
+    return MIN_BUDDY_SIZE << order;
+}
+
+void insert_free_buddy(buddy_header_t *buddy)
+{
+    int order = size_to_order(buddy->size);
+
+    if (buddy == buddy->next)
+    {
+        PANIC("self-loop detected in free list insertion: %p", buddy);
+    }
+
+    buddy->next = free_lists[order];
+    buddy->prev = NULL;
+    if (free_lists[order])
+    {
+        free_lists[order]->prev = buddy;
+    }
+    free_lists[order] = buddy;
+}
+
+void remove_free_buddy(buddy_header_t *buddy)
+{
+    int order = size_to_order(buddy->size);
+    if (buddy->prev)
+    {
+        buddy->prev->next = buddy->next;
+    }
+    else
+    {
+        free_lists[order] = buddy->next;
+    }
+    if (buddy->next)
+    {
+        buddy->next->prev = buddy->prev;
+    }
+    buddy->next = buddy->prev = NULL;
+}
+
 page_table_t *heap_pml4 = NULL;
 buddy_header_t *head = NULL;
 buddy_header_t *tail = NULL;
 uint8_t alignment = 8;
 
-buddy_header_t *split_buddy(buddy_header_t *buddy, size_t size)
+buddy_header_t *split_buddy(buddy_header_t *buddy, size_t target_size)
 {
     if (buddy == NULL)
     {
         return NULL;
     }
-    
-    while ((buddy->size / 2) >= size && (buddy->size / 2) >= MIN_BUDDY_SIZE)
-    {
-        buddy->size /= 2;
-        buddy_header_t *next = get_next_buddy(buddy);
-        next->size = buddy->size;
-        next->flags = 0;
-    }
 
+    while (buddy->size / 2 >= target_size && buddy->size / 2 >= MIN_BUDDY_SIZE)
+    {
+        size_t half = buddy->size / 2;
+        buddy->size = half;
+
+        buddy_header_t *split = get_next_buddy(buddy);
+        split->size = half;
+        split->flags = 0;
+
+        insert_free_buddy(split);
+    }
     return buddy;
 }
 
@@ -75,6 +136,7 @@ void buddy_coalesce(buddy_header_t *buddy)
 
         if (buddy->size == next->size && buddy_is_free(buddy) && buddy_is_free(next))
         {
+            remove_free_buddy(next);
             buddy->size *= 2;
         }
         else
@@ -86,34 +148,41 @@ void buddy_coalesce(buddy_header_t *buddy)
 
 buddy_header_t *allocate_buddy(size_t size)
 {
-    if (size == 0 || head == NULL || tail == NULL)
-    {
-        return NULL;
-    }
+    int target_order = size_to_order(size);
 
-    size_t smallest_fitting_size = 0;
-    buddy_header_t *best_buddy = NULL;
-    for (buddy_header_t *buddy = head; buddy != tail; buddy = get_next_buddy(buddy))
+    for (int order = target_order; order < MAX_ORDER; order++)
     {
-        if (buddy_is_free(buddy) && buddy->size >= size && (smallest_fitting_size == 0 || buddy->size < smallest_fitting_size))
+        if (free_lists[order] != NULL)
         {
-            smallest_fitting_size = buddy->size;
-            best_buddy = buddy;
+            buddy_header_t *buddy = free_lists[order];
+            remove_free_buddy(buddy);
+            buddy = split_buddy(buddy, order_to_size(target_order));
+            buddy->flags |= BUDDY_FLAG_USED;
+            return buddy;
         }
     }
 
-    return mark_as_used(split_buddy(best_buddy, size));
+    return NULL; // out of memory
 }
 
 void free_buddy(buddy_header_t *buddy)
 {
-    if (buddy == NULL)
+    if (!buddy)
     {
         return;
     }
 
+    if (buddy_is_free(buddy))
+    {
+        PANIC("double free detected at %p", buddy);
+        return;
+    }
+
     buddy->flags &= ~BUDDY_FLAG_USED;
+
     buddy_coalesce(buddy);
+
+    insert_free_buddy(buddy);
 }
 
 size_t align_forward_size(size_t ptr, size_t align)
@@ -161,6 +230,7 @@ int kmm_expand(size_t expand_size)
 
     tail = get_next_buddy(new_node);
 
+    insert_free_buddy(new_node);
     buddy_coalesce(head);
 
     return 0;
@@ -238,8 +308,12 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t initial_size, size
     head = (buddy_header_t *)base;
     head->size = initial_size;
     head->flags = 0;
+    head->next = head->prev = NULL;
 
     tail = get_next_buddy(head);
+
+    int initial_order = size_to_order(initial_size);
+    free_lists[initial_order] = head;
 
     return 0;
 }
@@ -305,6 +379,23 @@ void visualize_buddy_tree(void)
     }
 
     LOG_INFO("------------------------------------");
+}
+
+void print_free_lists(void)
+{
+    for (int i = 0; i < MAX_ORDER; i++)
+    {
+        LOG_INFO("Order %d (Size %zu):", i, order_to_size(i));
+        for (buddy_header_t *b = free_lists[i]; b; b = b->next)
+        {
+            LOG_INFO("  Addr: %p, Size: %zu", b, b->size);
+
+            if (b == b->next)
+            {
+                PANIC("self-loop detected in free list insertion: %p", b);
+            }
+        }
+    }
 }
 
 size_t get_free_memory(void)

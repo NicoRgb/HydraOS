@@ -71,4 +71,6 @@ int execute_next_process(void);
 process_t *get_current_process(void);
 process_t *get_process_from_pid(uint64_t pid);
 
+void print_processes(void);
+
 #endif

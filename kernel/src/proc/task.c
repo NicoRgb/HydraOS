@@ -273,6 +273,17 @@ void process_free(process_t *proc)
 process_t *proc_head = NULL;
 process_t *current_proc = NULL;
 
+void print_processes(void)
+{
+    LOG_INFO("processes");
+
+    process_t *proc = NULL;
+    for (proc = proc_head; proc != NULL; proc = proc->next)
+    {
+        LOG_INFO("process id %lld", proc->pid);
+    }
+}
+
 int process_register(process_t *proc)
 {
     proc->next = NULL;
