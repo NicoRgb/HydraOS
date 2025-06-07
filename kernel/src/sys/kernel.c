@@ -293,7 +293,7 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
     LOG_DEBUG("early initialization complete");
 }
 
-void kmain(uint64_t multiboot2_struct_addr)
+void kmain()
 {
     uint64_t i = 0;
     blockdev_t *bdev = NULL;

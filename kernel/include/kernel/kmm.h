@@ -14,4 +14,8 @@ void kfree(void *ptr);
 
 void *krealloc(void *ptr, size_t old_size, size_t new_size);
 
+void visualize_buddy_tree(void);
+size_t get_free_memory(void);
+size_t get_frag_count(void);
+
 #endif

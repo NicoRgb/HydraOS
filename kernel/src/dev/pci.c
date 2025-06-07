@@ -137,7 +137,7 @@ static int pci_scan_bus(uint8_t bus)
 int pci_init()
 {
     pci_device_count = 0;
-    pci_device_capacity = 64;
+    pci_device_capacity = 16;
     pci_devices = kmalloc(pci_device_capacity * sizeof(pci_device_t));
     if (!pci_devices)
     {

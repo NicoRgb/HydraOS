@@ -35,41 +35,6 @@ static bool elf_has_program_header(Elf64_Ehdr *header)
     return header->e_phoff != 0;
 }
 
-Elf64_Ehdr *elf_header(elf_file_t *elf_file)
-{
-    return elf_file->file_content;
-}
-
-Elf64_Shdr *elf_sheader(Elf64_Ehdr *header)
-{
-    return (Elf64_Shdr *)((uintptr_t)header + header->e_shoff);
-}
-
-Elf64_Phdr *elf_pheader(Elf64_Ehdr *header)
-{
-    if (!elf_has_program_header(header))
-    {
-        return NULL;
-    }
-
-    return (Elf64_Phdr *)((uintptr_t)header + header->e_phoff);
-}
-
-Elf64_Shdr *elf_section(Elf64_Ehdr *header, int index)
-{
-    return &elf_sheader(header)[index];
-}
-
-Elf64_Phdr *elf_program_header(Elf64_Ehdr *header, int index)
-{
-    return &elf_pheader(header)[index];
-}
-
-char *elf_str_table(Elf64_Ehdr *header)
-{
-    return (char *)header + elf_section(header, header->e_shstrndx)->sh_offset;
-}
-
 int elf_validate_loaded(Elf64_Ehdr *header)
 {
     return (elf_valid_signature((char *)header) && elf_valid_class(header) && elf_valid_encoding(header) && elf_has_program_header(header) && elf_is_executable(header)) ? RES_SUCCESS : -RES_EUNKNOWN;
@@ -77,9 +42,7 @@ int elf_validate_loaded(Elf64_Ehdr *header)
 
 int elf_process_load(elf_file_t *elf_file)
 {
-    Elf64_Ehdr *header = elf_header(elf_file);
-
-    int status = elf_validate_loaded(header);
+    int status = elf_validate_loaded(elf_file->header);
     if (status < 0)
     {
         return status;
@@ -90,7 +53,7 @@ int elf_process_load(elf_file_t *elf_file)
 
 uint64_t elf_entry(elf_file_t *file)
 {
-    return elf_get_entry(elf_header(file));
+    return elf_get_entry(file->header);
 }
 
 elf_file_t *elf_load(const char *path)
@@ -110,14 +73,38 @@ elf_file_t *elf_load(const char *path)
         return NULL;
     }
 
-    res->file_content = kmalloc(res->node->filesize);
-    if (!res->file_content)
+    res->header = kmalloc(sizeof(Elf64_Ehdr));
+    if (!res->header)
     {
         elf_free(res);
         return NULL;
     }
 
-    if (vfs_read(res->node, res->node->filesize, res->file_content) < 0)
+    if (vfs_read(res->node, sizeof(Elf64_Ehdr), (uint8_t *)res->header) < 0)
+    {
+        elf_free(res);
+        return NULL;
+    }
+
+    if (!elf_has_program_header(res->header))
+    {
+        return NULL;
+    }
+
+    res->pheader = kmalloc(sizeof(Elf64_Phdr) * res->header->e_phnum);
+    if (!res->pheader)
+    {
+        elf_free(res);
+        return NULL;
+    }
+
+    if (vfs_seek(res->node, res->header->e_phoff, SEEK_TYPE_SET) < 0)
+    {
+        elf_free(res);
+        return NULL;
+    }
+
+    if (vfs_read(res->node, sizeof(Elf64_Phdr) * res->header->e_phnum, (uint8_t *)res->pheader) < 0)
     {
         elf_free(res);
         return NULL;
@@ -139,9 +126,14 @@ void elf_free(elf_file_t *file)
         return;
     }
 
-    if (file->file_content)
+    if (file->header)
     {
-        kfree(file->file_content);
+        kfree(file->header);
+    }
+
+    if (file->pheader)
+    {
+        kfree(file->pheader);
     }
 
     if (file->node)
@@ -228,8 +220,8 @@ static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint
 
 int elf_load_and_map(process_t *proc, elf_file_t *elf_file)
 {
-    Elf64_Ehdr *header = elf_header(elf_file);
-    Elf64_Phdr *phdrs = elf_pheader(header);
+    Elf64_Ehdr *header = elf_file->header;
+    Elf64_Phdr *phdrs = elf_file->pheader;
 
     proc->num_data_pages = 0;
     for (int i = 0; i < header->e_phnum; i++)
@@ -263,8 +255,8 @@ int elf_load_and_map(process_t *proc, elf_file_t *elf_file)
 
 int elf_load_and_map_copy(process_t *proc, elf_file_t *elf_file, process_t *original) // copys the data sections (useful for forking
 {
-    Elf64_Ehdr *header = elf_header(elf_file);
-    Elf64_Phdr *phdrs = elf_pheader(header);
+    Elf64_Ehdr *header = elf_file->header;
+    Elf64_Phdr *phdrs = elf_file->pheader;
 
     proc->num_data_pages = 0;
     for (int i = 0; i < header->e_phnum; i++)

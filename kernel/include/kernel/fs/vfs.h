@@ -8,7 +8,7 @@
 #include <kernel/dev/blockdev.h>
 #include <kernel/fs/vpt.h>
 
-#define MAX_PATH 256
+#define MAX_PATH 128
 
 #define FS_FILE 0x01
 #define FS_DIRECTORY 0x02

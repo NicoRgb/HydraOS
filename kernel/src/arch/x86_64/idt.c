@@ -202,7 +202,7 @@ void exception_handler(interrupt_frame_t *frame)
         }
         if (frame->err_code & 0b100)
         {
-            kprintf("\x1b[41m- Memory access came from user ('%s') at 0x%x.\n", get_current_process()->path, get_current_process()->task->state.rip);
+            kprintf("\x1b[41m- Memory access came from user ('%s') at 0x%x.\n", get_current_process()->path, get_current_process()->task.state.rip);
         }
         else
         {

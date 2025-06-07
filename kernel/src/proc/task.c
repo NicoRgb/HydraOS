@@ -25,15 +25,8 @@ process_t *process_create(const char *path)
         return NULL;
     }
 
-    proc->task = kmalloc(sizeof(task_t));
-    if (!proc->task)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    memset(&proc->task->state, 0, sizeof(task_state_t));
-    proc->task->state.rip = elf_entry(proc->elf);
+    memset(&proc->task.state, 0, sizeof(task_state_t));
+    proc->task.state.rip = elf_entry(proc->elf);
 
     strncpy(proc->path, path, MAX_PATH);
     proc->pml4 = pmm_alloc();
@@ -44,7 +37,7 @@ process_t *process_create(const char *path)
         return NULL;
     }
 
-    proc->task->parent = proc;
+    proc->task.parent = proc;
 
     for (uintptr_t i = (uintptr_t)&__kernel_start; i < (uintptr_t)&__kernel_end; i += PAGE_SIZE)
     {
@@ -55,24 +48,24 @@ process_t *process_create(const char *path)
         }
     }
 
-    proc->task->num_stack_pages = PROCESS_STACK_SIZE / PAGE_SIZE;
-    proc->task->stack_pages = kmalloc(proc->task->num_stack_pages);
-    if (!proc->task->stack_pages)
+    proc->task.num_stack_pages = PROCESS_STACK_SIZE / PAGE_SIZE;
+    proc->task.stack_pages = kmalloc(proc->task.num_stack_pages * sizeof(void *));
+    if (!proc->task.stack_pages)
     {
         process_free(proc);
         return NULL;
     }
 
-    for (size_t i = 0; i < proc->task->num_stack_pages; i++)
+    for (size_t i = 0; i < proc->task.num_stack_pages; i++)
     {
-        proc->task->stack_pages[i] = pmm_alloc();
-        if (!proc->task->stack_pages[i])
+        proc->task.stack_pages[i] = pmm_alloc();
+        if (!proc->task.stack_pages[i])
         {
             process_free(proc);
             return NULL;
         }
 
-        if (pml4_map(proc->pml4, (void *)(PROCESS_STACK_VADDR_BASE + (PROCESS_STACK_SIZE - i * PAGE_SIZE)), proc->task->stack_pages[i], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
+        if (pml4_map(proc->pml4, (void *)(PROCESS_STACK_VADDR_BASE + (PROCESS_STACK_SIZE - i * PAGE_SIZE)), proc->task.stack_pages[i], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
         {
             process_free(proc);
             return NULL;
@@ -87,7 +80,7 @@ process_t *process_create(const char *path)
 
     memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t));
 
-    proc->task->state.rsp = PROCESS_STACK_VADDR_BASE + PROCESS_STACK_SIZE;
+    proc->task.state.rsp = PROCESS_STACK_VADDR_BASE + PROCESS_STACK_SIZE;
     proc->next = NULL;
 
     proc->pid = current_pid++;
@@ -135,6 +128,7 @@ process_t *process_create(const char *path)
     }
 
     elf_free(proc->elf);
+    proc->elf = NULL;
 
     return proc;
 }
@@ -156,14 +150,7 @@ process_t *process_clone(process_t *_proc)
         return NULL;
     }
 
-    proc->task = kmalloc(sizeof(task_t));
-    if (!proc->task)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    memcpy(&proc->task->state, &_proc->task->state, sizeof(task_state_t));
+    memcpy(&proc->task.state, &_proc->task.state, sizeof(task_state_t));
 
     strncpy(proc->path, _proc->path, MAX_PATH);
     proc->pml4 = pmm_alloc();
@@ -174,7 +161,7 @@ process_t *process_clone(process_t *_proc)
         return NULL;
     }
 
-    proc->task->parent = proc;
+    proc->task.parent = proc;
 
     for (uintptr_t i = (uintptr_t)&__kernel_start; i < (uintptr_t)&__kernel_end; i += PAGE_SIZE)
     {
@@ -185,26 +172,26 @@ process_t *process_clone(process_t *_proc)
         }
     }
 
-    proc->task->num_stack_pages = _proc->task->num_stack_pages;
-    proc->task->stack_pages = kmalloc(proc->task->num_stack_pages);
-    if (!proc->task->stack_pages)
+    proc->task.num_stack_pages = _proc->task.num_stack_pages;
+    proc->task.stack_pages = kmalloc(proc->task.num_stack_pages * sizeof(void *));
+    if (!proc->task.stack_pages)
     {
         process_free(proc);
         return NULL;
     }
 
-    for (size_t i = 0; i < proc->task->num_stack_pages; i++)
+    for (size_t i = 0; i < proc->task.num_stack_pages; i++)
     {
-        proc->task->stack_pages[i] = pmm_alloc();
-        if (!proc->task->stack_pages[i])
+        proc->task.stack_pages[i] = pmm_alloc();
+        if (!proc->task.stack_pages[i])
         {
             process_free(proc);
             return NULL;
         }
 
-        memcpy(proc->task->stack_pages[i], _proc->task->stack_pages[i], PAGE_SIZE);
+        memcpy(proc->task.stack_pages[i], _proc->task.stack_pages[i], PAGE_SIZE);
 
-        if (pml4_map(proc->pml4, (void *)(PROCESS_STACK_VADDR_BASE + (PROCESS_STACK_SIZE - i * PAGE_SIZE)), proc->task->stack_pages[i], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
+        if (pml4_map(proc->pml4, (void *)(PROCESS_STACK_VADDR_BASE + (PROCESS_STACK_SIZE - i * PAGE_SIZE)), proc->task.stack_pages[i], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
         {
             process_free(proc);
             return NULL;
@@ -235,6 +222,7 @@ process_t *process_clone(process_t *_proc)
     proc->pid = current_pid++;
 
     elf_free(proc->elf);
+    proc->elf = NULL;
     
     return proc;
 }
@@ -262,17 +250,13 @@ void process_free(process_t *proc)
         }
         kfree(proc->data_pages);
     }
-    if (proc->task && proc->task->stack_pages)
+    if (proc->task.stack_pages)
     {
-        for (size_t i = 0; i < proc->task->num_stack_pages; i++)
+        for (size_t i = 0; i < proc->task.num_stack_pages; i++)
         {
-            pmm_free(proc->task->stack_pages[i]);
+            pmm_free(proc->task.stack_pages[i]);
         }
-        kfree(proc->task->stack_pages);
-    }
-    if (proc->task)
-    {
-        kfree(proc->task);
+        kfree(proc->task.stack_pages);
     }
 
     for (int i = 0; i < PROCESS_MAX_STREAMS; i++)
@@ -385,7 +369,7 @@ int execute_next_process(void)
         }
     }
 
-    task_state_t state = current_proc->task->state; // needs to be copied because proc is allocated and not mapped in processes pml4
+    task_state_t state = current_proc->task.state; // needs to be copied because proc is allocated and not mapped in processes pml4
 
     int status = pml4_switch(current_proc->pml4);
     if (status < 0)

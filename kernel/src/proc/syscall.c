@@ -7,6 +7,7 @@
 #include <kernel/string.h>
 #include <kernel/dev/devm.h>
 #include <kernel/isr.h>
+#include <kernel/kmm.h>
 
 static void *process_get_pointer(process_t *proc, uintptr_t vaddr)
 {
@@ -59,7 +60,7 @@ int64_t syscall_write(process_t *proc, int64_t stream, int64_t data, int64_t siz
     return (int64_t)bytes_written;
 }
 
-int64_t syscall_fork(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *state)
+int64_t syscall_fork(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
     process_t *fork = process_clone(proc); // TODO: maybe the file changed
     if (!fork)
@@ -67,7 +68,7 @@ int64_t syscall_fork(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_
         PANIC("failed to fork process");
     }
 
-    fork->task->state.rax = 0; // return value
+    fork->task.state.rax = 0; // return value
 
     if (process_register(fork) < 0)
     {
@@ -84,6 +85,8 @@ int64_t syscall_exit(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_
     execute_next_process();
 
     PANIC("failed to execute process");
+
+    return 0;
 }
 
 int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
@@ -100,6 +103,10 @@ int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_
 
 int64_t syscall_exec(process_t *proc, int64_t _path, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
+    size_t free_mem = get_free_memory();
+    size_t frag_count = get_frag_count();
+    LOG_DEBUG("free mem: 0x%x, frag count: %lld", free_mem, frag_count);
+
     const char *path = process_get_pointer(proc, (uintptr_t)_path);
     uint64_t pid = proc->pid;
 
@@ -142,7 +149,7 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         while (1);
     }
 
-    memcpy(&proc->task->state, state, sizeof(task_state_t));
+    memcpy(&proc->task.state, state, sizeof(task_state_t));
 
     int64_t res = -1;
     switch (num)
@@ -164,6 +171,9 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         break;
     case 5:
         res = syscall_exec(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
+        break;
+    case 6:
+        visualize_buddy_tree();
         break;
     default:
         break;

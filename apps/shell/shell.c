@@ -52,15 +52,27 @@ int64_t start_process(const char *path)
 
 int main(void)
 {
-    fputs("Hello Shell World!\n", stdout);
+    fputs("Hydra Shell\n", stdout);
 
     char line[50];
     while (1)
     {
+        fputs("hysh > ", stdout);
+
         uint8_t size = shell_get_line(line);
         if (strcmp(line, "exit") == 0)
         {
             syscall_exit(0);
+        }
+        else if (strcmp(line, "help") == 0)
+        {
+            fputs("- help: print list of commands\n- exit: quit instance of shell\n- <program name>: execute program from full path\n", stdout);
+            continue;
+        }
+        else if (strcmp(line, "mem") == 0)
+        {
+            syscall(6, 0, 0, 0, 0, 0, 0);
+            continue;
         }
 
         int64_t pid = start_process(line);

@@ -23,7 +23,7 @@
 
 #define PROCESS_HEAP_VADDR_BASE 0x200000
 
-#define PROCESS_MAX_STREAMS 128
+#define PROCESS_MAX_STREAMS 8
 
 typedef struct
 {
@@ -44,7 +44,7 @@ typedef struct _task
 
 typedef struct _process
 {
-    task_t *task;
+    task_t task;
     elf_file_t *elf;
 
     char path[MAX_PATH];

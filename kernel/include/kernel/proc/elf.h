@@ -129,8 +129,10 @@ typedef struct
 
 typedef struct
 {
-    void *file_content;
     file_node_t *node;
+
+    Elf64_Ehdr *header;
+    Elf64_Phdr *pheader;
 } elf_file_t;
 
 struct _process;
