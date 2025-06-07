@@ -1,4 +1,4 @@
-#include <kernel/fs/vpt.h>
+#include <mbr.h>
 #include <kernel/kmm.h>
 
 typedef struct
@@ -96,10 +96,3 @@ int mbr_get(uint8_t index, void *mbr_data, virtual_blockdev_t *vbdev)
 
     return 0;
 }
-
-partition_table_t mbr_partition_table = {
-    .pt_init = &mbr_init,
-    .pt_free = &mbr_free,
-    .pt_test = &mbr_test,
-    .pt_get = &mbr_get
-};

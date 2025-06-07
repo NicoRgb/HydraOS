@@ -612,9 +612,29 @@ int ide_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
         return -RES_INVARG;
     }
 
-    // TODO
+    ide_device_t *dev = &ide_devices[bdev->_data];
 
-    return 0;
+    if (bdev->_data > 3 || dev->reserved == 0)
+    {
+        return -RES_INVARG;
+    }
+
+    if (((lba + 1) > dev->size) && (dev->type == IDE_ATA))
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    uint8_t err = 0;
+    if (dev->type == IDE_ATA)
+    {
+        err = ide_ata_access(ATA_WRITE, bdev->_data, lba, 1, data);
+    }
+    else if (dev->type == IDE_ATAPI)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    return -err; // TODO: use own error codes
 }
 
 int ide_eject(blockdev_t *bdev)

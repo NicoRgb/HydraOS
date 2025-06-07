@@ -273,18 +273,11 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
     if (IS_ERROR(init_devices()))
     {
         PANIC("failed to initialize devices");
-        ;
     }
 
     if (IS_ERROR(kprintf_init(get_chardev(boot_info.tty))))
     {
         PANIC("failed to initialize kprintf");
-        ;
-    }
-
-    if (IS_ERROR(register_partition_table(&mbr_partition_table)))
-    {
-        PANIC("failed to register mbr partition table");
     }
 
     LOG_INFO("early initialization complete");
