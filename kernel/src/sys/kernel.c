@@ -233,7 +233,7 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
     {
         PANIC("failed to allocate page");
     }
-    
+
     uint64_t total_pages = boot_info.total_memory / PAGE_SIZE;
     for (uint64_t page = 0; page < total_pages; page++) // TODO: only map necessary
     {
@@ -272,22 +272,19 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
 
     if (IS_ERROR(init_devices()))
     {
-        PANIC("failed to initialize devices");;
+        PANIC("failed to initialize devices");
+        ;
     }
 
     if (IS_ERROR(kprintf_init(get_chardev(boot_info.tty))))
     {
-        PANIC("failed to initialize kprintf");;
+        PANIC("failed to initialize kprintf");
+        ;
     }
 
     if (IS_ERROR(register_partition_table(&mbr_partition_table)))
     {
         PANIC("failed to register mbr partition table");
-    }
-
-    if (IS_ERROR(register_filesystem(&fat32_filesystem)))
-    {
-        PANIC("failed to register fat32 filesystem");
     }
 
     LOG_DEBUG("early initialization complete");
@@ -300,12 +297,12 @@ void kmain()
     do
     {
         i++;
-        bdev = get_blockdev(i-1);
+        bdev = get_blockdev(i - 1);
         if (!bdev)
         {
             break;
         }
-        kprintf("found disc %s with %ld sectors, id %ld\n", bdev->model, bdev->num_blocks, i-1);
+        kprintf("found disc %s with %ld sectors, id %ld\n", bdev->model, bdev->num_blocks, i - 1);
 
         if (scan_partition(bdev) < 0)
         {

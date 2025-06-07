@@ -11,6 +11,7 @@ mkdir -p /tmp/hydra_root/
 mkdir -p /tmp/hydra_root/boot/grub
 mkdir -p /tmp/hydra_root/bin
 mkdir -p /tmp/hydra_root/lib
+mkdir -p /tmp/hydra_root/mod
 mkdir -p /tmp/hydra_root/include
 
 if [[ $HYDRAOS_BOOT_SYSTEM != 'GRUB' ]]; then
@@ -20,11 +21,23 @@ if [[ $HYDRAOS_BOOT_SYSTEM != 'GRUB' ]]; then
     popd
 fi
 
+cp -r ../kernel/include/* /tmp/hydra_root/include/
+
+for dir in ../modules/*/; do
+    if [ -d "$dir" ]; then
+        pushd $dir
+            module=$(basename "$dir")
+            echo "Compiling $module"
+            make build/${module}_module.a ROOT=/tmp/hydra_root/
+            cp build/${module}_module.a /tmp/hydra_root/mod/${module}_module.a
+        popd
+    fi
+done
+
 pushd ../kernel
     echo "Compiling Kernel"
-    make build/kernel.elf
+    make build/kernel.elf ROOT=/tmp/hydra_root/
     cp build/kernel.elf /tmp/hydra_root/boot/hydrakernel
-    cp -r include/* /tmp/hydra_root/include/
 popd
 
 pushd ../libc

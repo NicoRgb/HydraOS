@@ -1,4 +1,4 @@
-#include <kernel/fs/vfs.h>
+#include <fat32.h>
 #include <kernel/kmm.h>
 #include <kernel/string.h>
 
@@ -1617,15 +1617,3 @@ int fat32_test(virtual_blockdev_t *bdev)
 
     return 0;
 }
-
-filesystem_t fat32_filesystem = {
-    .fs_init = &fat32_init,
-    .fs_free = &fat32_free,
-    .fs_test = &fat32_test,
-    .fs_open = &fat32_open,
-    .fs_close = &fat32_close,
-    .fs_read = &fat32_read,
-    .fs_write = &fat32_write,
-    .fs_readdir = &fat32_readdir,
-    .fs_delete = &fat32_delete
-};

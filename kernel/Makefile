@@ -1,3 +1,5 @@
+ROOT ?= ./
+
 KOBJS:=$(patsubst src/%.c, build/%.o, $(wildcard $(shell find src -name '*.c')))
 KOBJS+=$(patsubst src/%.asm, build/%.asm.o, $(wildcard $(shell find src -name '*.asm')))
 
@@ -37,9 +39,9 @@ build/%.asm.o: src/%.asm
 	@echo "AS\t$@"
 	@nasm -f elf64 -o $@ $^
 
-build/kernel.elf: $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(KOBJS) $(CRTEND_OBJ) $(CRTN_OBJ)
+build/kernel.elf: $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(KOBJS) $(ROOT)/mod/fat32_module.a $(CRTEND_OBJ) $(CRTN_OBJ)
 	@mkdir -p $(@D)
 	@echo "LD\t$@"
-	@$(LD) $^ -o $@ -T src/arch/$(ARCH)/linker.ld $(LDFLAGS)
+	@$(LD) --whole-archive $^ --no-whole-archive -o $@ -T src/arch/$(ARCH)/linker.ld $(LDFLAGS)
 	@grub-file --is-x86-multiboot2 $@
 	@grub-file --is-x86-multiboot $@
