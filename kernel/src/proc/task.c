@@ -16,6 +16,8 @@ process_t *process_create(const char *path)
         return NULL;
     }
 
+    proc->num_heap_pages = 0;
+
     memset(proc, 0, sizeof(process_t));
 
     proc->elf = elf_load(path);
@@ -36,8 +38,6 @@ process_t *process_create(const char *path)
         process_free(proc);
         return NULL;
     }
-
-    proc->task.parent = proc;
 
     for (uintptr_t i = (uintptr_t)&__kernel_start; i < (uintptr_t)&__kernel_end; i += PAGE_SIZE)
     {
@@ -141,6 +141,8 @@ process_t *process_clone(process_t *_proc)
         return NULL;
     }
 
+    proc->num_heap_pages = _proc->num_heap_pages;
+
     memset(proc, 0, sizeof(process_t));
 
     proc->elf = elf_load(_proc->path);
@@ -160,8 +162,6 @@ process_t *process_clone(process_t *_proc)
         process_free(proc);
         return NULL;
     }
-
-    proc->task.parent = proc;
 
     for (uintptr_t i = (uintptr_t)&__kernel_start; i < (uintptr_t)&__kernel_end; i += PAGE_SIZE)
     {
@@ -198,6 +198,24 @@ process_t *process_clone(process_t *_proc)
         }
     }
 
+    for (size_t i = 0; i < proc->num_heap_pages; i++)
+    {
+        proc->heap_pages[i] = pmm_alloc();
+        if (!proc->heap_pages[i])
+        {
+            process_free(proc);
+            return NULL;
+        }
+
+        memcpy(proc->heap_pages[i], _proc->heap_pages[i], PAGE_SIZE);
+
+        if (pml4_map(proc->pml4, (void *)(PROCESS_HEAP_VADDR_BASE + (i * PAGE_SIZE)), proc->heap_pages[i], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
+        {
+            process_free(proc);
+            return NULL;
+        }
+    }
+
     if (elf_load_and_map_copy(proc, proc->elf, _proc) < 0)
     {
         process_free(proc);
@@ -225,6 +243,32 @@ process_t *process_clone(process_t *_proc)
     proc->elf = NULL;
     
     return proc;
+}
+
+void *process_allocate_page(process_t *proc)
+{
+    size_t index = proc->num_data_pages++;
+    void *virt = (void *)(PROCESS_HEAP_VADDR_BASE + (index * PAGE_SIZE));
+
+    if (index > PROCESS_MAX_HEAP_PAGES)
+    {
+        PANIC("process reached heap limit");
+        return NULL;
+    }
+
+    proc->heap_pages[index] = pmm_alloc();
+    if (proc->heap_pages[index] == NULL)
+    {
+        return NULL;
+    }
+
+    if (pml4_map(proc->pml4, virt, proc->heap_pages[index], PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER) < 0)
+    {
+        PANIC("page mapping failed");
+        return NULL;
+    }
+
+    return virt;
 }
 
 void process_free(process_t *proc)
@@ -272,17 +316,6 @@ void process_free(process_t *proc)
 
 process_t *proc_head = NULL;
 process_t *current_proc = NULL;
-
-void print_processes(void)
-{
-    LOG_INFO("processes");
-
-    process_t *proc = NULL;
-    for (proc = proc_head; proc != NULL; proc = proc->next)
-    {
-        LOG_INFO("process id %lld", proc->pid);
-    }
-}
 
 int process_register(process_t *proc)
 {

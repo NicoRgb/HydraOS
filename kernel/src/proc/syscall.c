@@ -96,17 +96,11 @@ int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_
         return pid;
     }
 
-    kprintf("PING NOT RESOLVED\n");
-
     return 0;
 }
 
 int64_t syscall_exec(process_t *proc, int64_t _path, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
-    size_t free_mem = get_free_memory();
-    size_t frag_count = get_frag_count();
-    LOG_DEBUG("free mem: 0x%x, frag count: %lld", free_mem, frag_count);
-
     const char *path = process_get_pointer(proc, (uintptr_t)_path);
     uint64_t pid = proc->pid;
 
@@ -130,6 +124,11 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t, int64_t, int64_t, 
     PANIC("failed to execute process");
 
     return 0;
+}
+
+int64_t syscall_alloc(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+{
+    return (int64_t)process_allocate_page(proc);
 }
 
 extern page_table_t *kernel_pml4;
@@ -173,7 +172,7 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         res = syscall_exec(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
     case 6:
-        print_processes();
+        res = syscall_alloc(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
     default:
         break;

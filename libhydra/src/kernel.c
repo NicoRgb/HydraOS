@@ -48,3 +48,8 @@ void syscall_exec(const uint8_t *path)
 {
     syscall(_SYSCALL_EXEC, (uint64_t)path, 0, 0, 0, 0, 0);
 }
+
+void *syscall_alloc(void)
+{
+    return (void *)syscall(_SYSCALL_ALLOC, 0, 0, 0, 0, 0, 0);
+}

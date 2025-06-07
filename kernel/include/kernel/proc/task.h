@@ -24,6 +24,7 @@
 #define PROCESS_HEAP_VADDR_BASE 0x200000
 
 #define PROCESS_MAX_STREAMS 8
+#define PROCESS_MAX_HEAP_PAGES 32
 
 typedef struct
 {
@@ -36,7 +37,6 @@ struct _process;
 
 typedef struct _task
 {
-    struct _process *parent;
     void **stack_pages; // physical addresses
     size_t num_stack_pages;
     task_state_t state;
@@ -52,6 +52,9 @@ typedef struct _process
     void **data_pages; // physical addresses
     size_t num_data_pages;
 
+    void *heap_pages[PROCESS_MAX_HEAP_PAGES];
+    size_t num_heap_pages;
+
     stream_t streams[PROCESS_MAX_STREAMS];
 
     uint64_t pid;
@@ -65,12 +68,12 @@ process_t *process_create(const char *path);
 void process_free(process_t *proc);
 process_t *process_clone(process_t *proc);
 
+void *process_allocate_page(process_t *proc);
+
 int process_register(process_t *proc);
 int process_unregister(process_t *proc);
 int execute_next_process(void);
 process_t *get_current_process(void);
 process_t *get_process_from_pid(uint64_t pid);
-
-void print_processes(void);
 
 #endif

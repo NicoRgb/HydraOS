@@ -34,7 +34,7 @@ int printf_(const char *st, ...);
 #define fprintf fprintf_
 int fprintf_(FILE *f, const char *st, ...);
 
-#define vfprintf_ vfprintf
+#define vfprintf vfprintf_
 int vfprintf_(FILE *f, const char *st, va_list va);
 
 #define snprintf snprintf_

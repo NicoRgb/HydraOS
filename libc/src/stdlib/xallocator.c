@@ -1,7 +1,10 @@
-#include <kernel/kmm.h>
-#include <kernel/pmm.h>
-#include <kernel/string.h>
+#include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
+
+void *syscall_alloc(void);
+
+#define PAGE_SIZE 4096
 
 #define MIN_BUDDY_SIZE 64
 #define EXPAND_PAGE_NUM 16
@@ -66,11 +69,6 @@ void insert_free_buddy(buddy_header_t *buddy)
 {
     int order = size_to_order(buddy->size);
 
-    if (buddy == buddy->next)
-    {
-        PANIC("self-loop detected in free list insertion: %p", buddy);
-    }
-
     buddy->next = free_lists[order];
     buddy->prev = NULL;
     if (free_lists[order])
@@ -98,7 +96,6 @@ void remove_free_buddy(buddy_header_t *buddy)
     buddy->next = buddy->prev = NULL;
 }
 
-page_table_t *heap_pml4 = NULL;
 buddy_header_t *head = NULL;
 buddy_header_t *tail = NULL;
 uint8_t alignment = 8;
@@ -172,12 +169,6 @@ void free_buddy(buddy_header_t *buddy)
         return;
     }
 
-    if (buddy_is_free(buddy))
-    {
-        PANIC("double free detected at %p", buddy);
-        return;
-    }
-
     buddy->flags &= ~BUDDY_FLAG_USED;
 
     buddy_coalesce(buddy);
@@ -201,27 +192,11 @@ size_t align_forward_size(size_t ptr, size_t align)
 
 int kmm_expand(size_t expand_size)
 {
-    LOG_INFO("allocator expanded");
-
     expand_size = align_forward_size(expand_size, PAGE_SIZE);
-    if (expand_size < EXPAND_PAGE_NUM * PAGE_SIZE)
-    {
-        expand_size = EXPAND_PAGE_NUM * PAGE_SIZE;
-    }
 
     for (size_t i = 0; i < expand_size / PAGE_SIZE; i++)
     {
-        void *page = pmm_alloc();
-        if (!page)
-        {
-            return -RES_NOMEM;
-        }
-
-        int status = pml4_map(heap_pml4, (void *)(tail + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
-        if (status < 0)
-        {
-            return status;
-        }
+        syscall_alloc();
     }
 
     buddy_header_t *new_node = (buddy_header_t *)tail;
@@ -243,7 +218,7 @@ void *buddy_allocator_alloc(size_t size)
 
     if (allocation == NULL)
     {
-        if (IS_ERROR(kmm_expand(adjusted_size)))
+        if (kmm_expand(adjusted_size) < 0)
         {
             return NULL;
         }
@@ -270,11 +245,11 @@ void buddy_allocator_free(void *ptr)
     free_buddy(buddy);
 }
 
-int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t initial_size, size_t _alignment)
+int kmm_init(size_t initial_size, size_t _alignment)
 {
-    if (!kernel_pml4 || base == 0 || (initial_size & (initial_size - 1)) != 0 || (_alignment & (_alignment - 1)) != 0)
+    if ((initial_size & (initial_size - 1)) != 0 || (_alignment & (_alignment - 1)) != 0)
     {
-        return -RES_INVARG;
+        return -1;
     }
 
     if (_alignment < sizeof(buddy_header_t))
@@ -282,27 +257,18 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t initial_size, size
         _alignment = sizeof(buddy_header_t);
     }
 
-    if (((uintptr_t)base % _alignment) != 0)
+    alignment = _alignment;
+    void *base = syscall_alloc();
+
+    initial_size = align_forward_size(initial_size, PAGE_SIZE);
+    for (int i = 1; i < initial_size / PAGE_SIZE; i++)
     {
-        return -RES_INVARG;
+        syscall_alloc();
     }
 
-    alignment = _alignment;
-    heap_pml4 = kernel_pml4;
-
-    for (size_t i = 0; i < initial_size / PAGE_SIZE; i++)
+    if (((uintptr_t)base % _alignment) != 0)
     {
-        void *page = pmm_alloc();
-        if (!page)
-        {
-            return -RES_NOMEM;
-        }
-
-        int status = pml4_map(kernel_pml4, (void *)(base + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
-        if (status < 0)
-        {
-            return status;
-        }
+        return -1;
     }
 
     head = (buddy_header_t *)base;
@@ -316,109 +282,4 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t initial_size, size
     free_lists[initial_order] = head;
 
     return 0;
-}
-
-void *kmalloc(size_t size)
-{
-    if (size >= PAGE_SIZE)
-    {
-        LOG_WARNING("buddy allocation greather than one page, size %lld", size);
-    }
-
-    void *res = buddy_allocator_alloc(size);
-    if (res == NULL)
-    {
-        PANIC("no more heap in kernel");
-    }
-    return res;
-}
-
-void kfree(void *ptr)
-{
-    if (!ptr)
-    {
-        return;
-    }
-
-    buddy_allocator_free(ptr);
-}
-
-void *krealloc(void *ptr, size_t old_size, size_t new_size)
-{
-    void *res = kmalloc(new_size);
-    memcpy(res, ptr, old_size);
-    kfree(ptr);
-    return res;
-}
-
-void visualize_buddy_tree(void)
-{
-    LOG_INFO("Buddy Allocator Tree:");
-    LOG_INFO("------------------------------------");
-
-    for (buddy_header_t *buddy = head; buddy != tail; buddy = get_next_buddy(buddy))
-    {
-        size_t size = buddy->size;
-        size_t max_size = (uintptr_t)tail - (uintptr_t)head;
-        int level = 0;
-        for (size_t s = size; s < max_size; s <<= 1)
-        {
-            level++;
-        }
-
-        char indent[32];
-        memset(indent, ' ', level * 2);
-        indent[level * 2] = '\0';
-
-        const char *used_str = buddy_is_free(buddy) ? "[Free]" : "[Used]";
-        LOG_INFO("%s├─ Addr: 0x%08llx | Size: %-8llu %s",
-                 indent,
-                 (uint64_t)(uintptr_t)buddy,
-                 (uint64_t)buddy->size,
-                 used_str);
-    }
-
-    LOG_INFO("------------------------------------");
-}
-
-void print_free_lists(void)
-{
-    for (int i = 0; i < MAX_ORDER; i++)
-    {
-        LOG_INFO("Order %d (Size %zu):", i, order_to_size(i));
-        for (buddy_header_t *b = free_lists[i]; b; b = b->next)
-        {
-            LOG_INFO("  Addr: %p, Size: %zu", b, b->size);
-
-            if (b == b->next)
-            {
-                PANIC("self-loop detected in free list insertion: %p", b);
-            }
-        }
-    }
-}
-
-size_t get_free_memory(void)
-{
-    size_t size = 0;
-    for (buddy_header_t *buddy = head; buddy != tail; buddy = get_next_buddy(buddy))
-    {
-        size += buddy->size;
-    }
-
-    return size;
-}
-
-size_t get_frag_count(void)
-{
-    size_t count = 0;
-    for (buddy_header_t *buddy = head; buddy != tail; buddy = get_next_buddy(buddy))
-    {
-        if (buddy_is_free(buddy))
-        {
-            count++;
-        }
-    }
-
-    return count;
 }

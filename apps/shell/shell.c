@@ -1,6 +1,7 @@
 #include <hydra/kernel.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 uint8_t shell_get_line(char *line)
 {
@@ -67,11 +68,6 @@ int main(void)
         else if (strcmp(line, "help") == 0)
         {
             fputs("- help: print list of commands\n- exit: quit instance of shell\n- <program name>: execute program from full path\n", stdout);
-            continue;
-        }
-        else if (strcmp(line, "mem") == 0)
-        {
-            syscall(6, 0, 0, 0, 0, 0, 0);
             continue;
         }
 
