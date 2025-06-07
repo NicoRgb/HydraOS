@@ -149,7 +149,7 @@ static KRES process_elf_sections(struct multiboot_tag_elf_sections *multiboot2_e
 
         if (entry->sh_type == SHT_SYMTAB)
         {
-            LOG_DEBUG("found kernel symbol table");
+            LOG_INFO("found kernel symbol table");
             boot_info.symtabndx = i;
         }
     }
@@ -176,12 +176,12 @@ static KRES parse_multiboot2_structure(uint64_t multiboot2_struct_addr)
     {
         if (tag->type == MULTIBOOT_TAG_TYPE_MMAP)
         {
-            LOG_DEBUG("found multiboot memory map");
+            LOG_INFO("found multiboot memory map");
             CHECK(process_mmap((struct multiboot_tag_mmap *)tag));
         }
         else if (tag->type == MULTIBOOT_TAG_TYPE_ELF_SECTIONS)
         {
-            LOG_DEBUG("found multiboot elf sections");
+            LOG_INFO("found multiboot elf sections");
             CHECK(process_elf_sections((struct multiboot_tag_elf_sections *)tag));
         }
         else if (tag->type == MULTIBOOT_TAG_TYPE_CMDLINE)
@@ -287,7 +287,7 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
         PANIC("failed to register mbr partition table");
     }
 
-    LOG_DEBUG("early initialization complete");
+    LOG_INFO("early initialization complete");
 }
 
 void kmain()
@@ -302,11 +302,11 @@ void kmain()
         {
             break;
         }
-        kprintf("found disc %s with %ld sectors, id %ld\n", bdev->model, bdev->num_blocks, i - 1);
+        LOG_INFO("found disc %s with %ld sectors, id %ld", bdev->model, bdev->num_blocks, i - 1);
 
         if (scan_partition(bdev) < 0)
         {
-            kprintf("\x1b[31mfailed to scan partition table\n");
+            LOG_INFO("\x1b[31mfailed to scan partition table");
             continue;
         }
 
@@ -317,22 +317,19 @@ void kmain()
             {
                 break;
             }
-            kprintf(" - parititon type: 0x%x\n", part->type);
+            LOG_INFO(" - parititon type: 0x%x", part->type);
             if (part->type == 0x83)
             {
                 if (vfs_mount_blockdev(part) < 0)
                 {
                     PANIC("failed to mount partition");
                 }
-                kprintf("mounted\n");
+                LOG_INFO("mounted");
             }
         }
     } while (i > 0);
 
-    kprintf("initializing the kernel\n");
-    kprintf("\x1b[31mRed\x1b[0m \x1b[32mGreen\x1b[0m \x1b[33mYellow\x1b[0m \x1b[34mBlue\x1b[0m \x1b[35mMagenta\x1b[0m \x1b[36mCyan\x1b[0m\n");
-
-    kprintf("starting sysinit...\n");
+    LOG_INFO("starting sysinit...");
     process_t *proc = process_create("0:/bin/sysinit");
     if (!proc)
     {

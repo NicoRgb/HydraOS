@@ -175,46 +175,46 @@ void exception_handler(interrupt_frame_t *frame)
         PANIC("failed to switch pml4");
     }
 
-    kprintf("\x1b[41mCPU exception triggered\n\n[Exception Info]\nType: %s\n", exception_names[frame->int_no]);
+    LOG_ERROR("\x1b[41mCPU exception triggered\n\n[Exception Info]\nType: %s\n", exception_names[frame->int_no]);
     switch (frame->int_no)
     {
     case 14: // Page Fault
         uint64_t cr2_val;
         __asm__ volatile("movq %%cr2, %0" : "=r"(cr2_val));
 
-        kprintf("\x1b[41mError Code:\n");
-        kprintf("\x1b[41m- Tried to access virtual address 0x%x\n", cr2_val);
+        LOG_ERROR("\x1b[41mError Code:");
+        LOG_ERROR("\x1b[41m- Tried to access virtual address 0x%x\n", cr2_val);
         if (frame->err_code & 0b1)
         {
-            kprintf("\x1b[41m- Couldn't complete because of page-protection violation\n");
+            LOG_ERROR("\x1b[41m- Couldn't complete because of page-protection violation");
         }
         else
         {
-            kprintf("\x1b[41m- Couldn't complete because page was not present\n");
+            LOG_ERROR("\x1b[41m- Couldn't complete because page was not present");
         }
         if (frame->err_code & 0b10)
         {
-            kprintf("\x1b[41m- This was an attempt to WRITE to this address.\n");
+            LOG_ERROR("\x1b[41m- This was an attempt to WRITE to this address.");
         }
         else
         {
-            kprintf("\x1b[41m- This was an attempt to READ from this address.\n");
+            LOG_ERROR("\x1b[41m- This was an attempt to READ from this address.");
         }
         if (frame->err_code & 0b100)
         {
-            kprintf("\x1b[41m- Memory access came from user ('%s') at 0x%x.\n", get_current_process()->path, get_current_process()->task.state.rip);
+            LOG_ERROR("\x1b[41m- Memory access came from user ('%s') at 0x%x.\n", get_current_process()->path, get_current_process()->task.state.rip);
         }
         else
         {
-            kprintf("\x1b[41m- Memory access came from kernel.\n");
+            LOG_ERROR("\x1b[41m- Memory access came from kernel.");
         }
         if (frame->err_code & 0b1000)
         {
-            kprintf("\x1b[41m- caused by reading a 1 in a reserved field.\n");
+            LOG_ERROR("\x1b[41m- caused by reading a 1 in a reserved field.");
         }
         if (frame->err_code & 0b10000)
         {
-            kprintf("\x1b[41m- caused by an instruction fetch.\n");
+            LOG_ERROR("\x1b[41m- caused by an instruction fetch.");
         }
         break;
 
@@ -222,7 +222,7 @@ void exception_handler(interrupt_frame_t *frame)
         break;
     }
 
-    kprintf("\x1b[41m\n[Registers]\ncs=0x%x rip=0x%x\nrflags=0x%x error=0x%x\nrax=0x%x rcx=0x%x\nrdx=0x%x rsi=0x%x\nrdi=0x%x r8=0x%x\nr9=0x%x r10=0x%x\nr11=0x%x rbp=0x%x\nrsp=0x%x\n",
+    LOG_ERROR("\x1b[41m\n[Registers]\ncs=0x%x rip=0x%x\nrflags=0x%x error=0x%x\nrax=0x%x rcx=0x%x\nrdx=0x%x rsi=0x%x\nrdi=0x%x r8=0x%x\nr9=0x%x r10=0x%x\nr11=0x%x rbp=0x%x\nrsp=0x%x\n",
               frame->cs, frame->rip, frame->rflags, frame->err_code, frame->rax, frame->rcx, frame->rdx,
               frame->rsi, frame->rdi, frame->r8, frame->r9, frame->r10, frame->r11, frame->rsp);
 
