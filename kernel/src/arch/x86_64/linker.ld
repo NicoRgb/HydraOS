@@ -5,29 +5,28 @@ SECTIONS {
     . = 1M;
     __kernel_start = .;
 
-    .multiboot : {
+    .multiboot : ALIGN(CONSTANT(MAXPAGESIZE)) {
         KEEP(*(.multiboot))
     }
 
-    .text : {
+    .text : ALIGN(CONSTANT(MAXPAGESIZE)) {
         *(.text)
     }
 
-    .rodata : {
+    .rodata : ALIGN(CONSTANT(MAXPAGESIZE)) {
         *(.rodata)
     }
 
-    .data : {
+    .data : ALIGN(CONSTANT(MAXPAGESIZE)) {
         *(.data)
     }
 
-    .bss : {
+    .bss : ALIGN(CONSTANT(MAXPAGESIZE)) {
         *(.bss)
     }
 
     /DISCARD/ : {
         *(.comment)
-        *(.eh_frame)
     }
 
     __kernel_end = .;
