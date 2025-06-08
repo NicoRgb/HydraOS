@@ -53,3 +53,13 @@ void *syscall_alloc(void)
 {
     return (void *)syscall(_SYSCALL_ALLOC, 0, 0, 0, 0, 0, 0);
 }
+
+uint64_t syscall_open(const uint8_t *path, uint8_t open_actions)
+{
+    return syscall(_SYSCALL_OPEN, (uint64_t)path, (uint64_t)open_actions, 0, 0, 0, 0);
+}
+
+void syscall_close(uint64_t stream)
+{
+    syscall(_SYSCALL_CLOSE, stream, 0, 0, 0, 0, 0);
+}

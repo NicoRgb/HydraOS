@@ -24,6 +24,8 @@ int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_
 {
     stream->type = STREAM_TYPE_FILE;
     stream->flags = flags;
+    stream->path = strdup(path);
+    stream->open_action = open_action;
 
     stream->node = vfs_open(path, open_action);
     if (!stream->node)
@@ -53,6 +55,7 @@ void stream_free(stream_t *stream)
         break;
     case STREAM_TYPE_FILE:
         vfs_close(stream->node);
+        kfree(stream->path);
         break;
     case STREAM_TYPE_DRIVER:
         break;
@@ -203,8 +206,7 @@ int stream_clone(stream_t *src, stream_t *dest)
         dest->size = src->size;
         break;
     case STREAM_TYPE_FILE:
-        // TODO: implement
-        return -RES_INVARG;
+        stream_create_file(dest, src->flags, src->path, src->open_action);
         break;
     case STREAM_TYPE_DRIVER:
         stream_create_driver(dest, src->flags, src->device);

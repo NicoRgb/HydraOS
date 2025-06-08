@@ -6,7 +6,7 @@ char *fgets(char *s, int c, FILE *f)
     int _c = 0;
     while (_c < (c - 1))
     {
-        char ascii = fgetc(stdin);
+        char ascii = fgetc(f);
         if (ascii == 0)
         {
             continue;

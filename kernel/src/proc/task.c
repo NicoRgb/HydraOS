@@ -271,6 +271,48 @@ void *process_allocate_page(process_t *proc)
     return virt;
 }
 
+size_t process_insert_stream(process_t *proc, stream_t *stream)
+{
+    for (size_t i = 0; i < PROCESS_MAX_STREAMS; i++)
+    {
+        if (proc->streams[i].type == STREAM_TYPE_NULL)
+        {
+            int res = stream_clone(stream, &proc->streams[i]);
+            if (res < 0)
+            {
+                return 0;
+            }
+
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+size_t process_insert_file(process_t *proc, const char *path, uint8_t open_action)
+{
+    for (size_t i = 0; i < PROCESS_MAX_STREAMS; i++)
+    {
+        if (proc->streams[i].type == STREAM_TYPE_NULL)
+        {
+            if (stream_create_file(&proc->streams[i], 0, path, open_action) < 0)
+            {
+                return 0;
+            }
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+void process_remove_stream(process_t *proc, size_t index)
+{
+    stream_free(&proc->streams[index]);
+    proc->streams[index].type = STREAM_TYPE_NULL;
+}
+
 void process_free(process_t *proc)
 {
     if (!proc)

@@ -15,10 +15,12 @@ extern uint64_t _stdin;
 extern uint64_t _stdout;
 extern uint64_t _stderr;
 
-#define stdin ((FILE *)&_stdin)
-#define stdout ((FILE *)&_stdout)
-#define stderr ((FILE *)&_stderr)
+#define stdin ((FILE *)_stdin)
+#define stdout ((FILE *)_stdout)
+#define stderr ((FILE *)_stderr)
 
+FILE *fopen(const char *s, const char *a);
+int fclose(FILE *f);
 int fgetc(FILE *f);
 char *fgets(char *s, int c, FILE *f);
 int fputc(char c, FILE *f);

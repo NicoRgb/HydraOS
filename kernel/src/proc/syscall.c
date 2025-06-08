@@ -131,6 +131,18 @@ int64_t syscall_alloc(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64
     return (int64_t)process_allocate_page(proc);
 }
 
+int64_t syscall_open(process_t *proc, int64_t _path, int64_t _open_actions, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+{
+    const char *path = process_get_pointer(proc, (uintptr_t)_path);
+    return (int64_t)process_insert_file(proc, path, (uint8_t)_open_actions);
+}
+
+int64_t syscall_close(process_t *proc, int64_t stream, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+{
+    process_remove_stream(proc, (size_t)stream);
+    return 0;
+}
+
 extern page_table_t *kernel_pml4;
 
 int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, int64_t arg5, task_state_t *state)
@@ -173,6 +185,12 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         break;
     case 6:
         res = syscall_alloc(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
+        break;
+    case 7:
+        res = syscall_open(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
+        break;
+    case 8:
+        res = syscall_close(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
     default:
         break;

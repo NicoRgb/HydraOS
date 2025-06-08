@@ -6,5 +6,5 @@ size_t strlen(const char *cs);
 
 int fputs(const char *st, FILE *f)
 {
-    return (int)syscall_write(*(uint64_t *)f, st, strlen(st));
+    return (int)syscall_write((uint64_t)f, st, strlen(st));
 }
