@@ -5,5 +5,6 @@
 
 void *malloc(size_t s);
 void free(void *p);
+void *realloc(void *p, size_t s);
 
 #endif

@@ -164,37 +164,34 @@ static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint
 
     for (size_t i = 0; i < (ph->p_memsz + (PAGE_SIZE - 1)) / PAGE_SIZE; i++)
     {
-        proc->data_pages[*data_pages_index] = pmm_alloc();
-        if (!proc->data_pages[*data_pages_index])
+        void *page = pmm_alloc();
+        if (!page)
         {
             return -RES_NOMEM;
         }
 
-        if (ph->p_memsz > ph->p_filesz)
+        memset(page, 0, PAGE_SIZE);
+
+        size_t segment_offset = i * PAGE_SIZE;
+        size_t file_bytes_left = (ph->p_filesz > segment_offset) ? (ph->p_filesz - segment_offset) : 0;
+        size_t to_read = (file_bytes_left > PAGE_SIZE) ? PAGE_SIZE : file_bytes_left;
+
+        if (to_read > 0)
         {
-            if (original)
+            status = vfs_seek(elf_file->node, ph->p_offset + segment_offset, SEEK_TYPE_SET);
+            if (status < 0)
             {
-                memcpy(proc->data_pages[*data_pages_index], original->data_pages[*data_pages_index], PAGE_SIZE);
-            }
-            else
-            {
-                memset(proc->data_pages[*data_pages_index], 0, PAGE_SIZE);
-            }
-        }
-        else
-        {
-            size_t remainder = ph->p_memsz - i * PAGE_SIZE;
-            if (remainder > PAGE_SIZE)
-            {
-                remainder = PAGE_SIZE;
+                return status;
             }
 
-            status = vfs_read(elf_file->node, remainder, proc->data_pages[*data_pages_index]);
+            status = vfs_read(elf_file->node, to_read, page);
             if (status < 0)
             {
                 return status;
             }
         }
+
+        proc->data_pages[*data_pages_index] = page;
 
         int flags = PAGE_PRESENT | PAGE_USER;
         if ((ph->p_flags & PF_W) == PF_W)

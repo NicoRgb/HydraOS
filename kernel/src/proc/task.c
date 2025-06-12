@@ -198,7 +198,7 @@ process_t *process_clone(process_t *_proc)
         }
     }
 
-    for (size_t i = 0; i < proc->num_heap_pages; i++)
+    for (size_t i = 0; i < _proc->num_heap_pages; i++)
     {
         proc->heap_pages[i] = pmm_alloc();
         if (!proc->heap_pages[i])
@@ -247,7 +247,7 @@ process_t *process_clone(process_t *_proc)
 
 void *process_allocate_page(process_t *proc)
 {
-    size_t index = proc->num_data_pages++;
+    size_t index = proc->num_heap_pages++;
     void *virt = (void *)(PROCESS_HEAP_VADDR_BASE + (index * PAGE_SIZE));
 
     if (index > PROCESS_MAX_HEAP_PAGES)

@@ -3,7 +3,39 @@
 #include <string.h>
 #include <stdlib.h>
 
-uint8_t shell_get_line(char *line)
+#define LINE_ALLOCATION_SIZE 256
+#define TOKEN_BUFFER_SIZE 8
+#define TOKEN_DELIM " \t\r\n\a"
+
+int shell_help(char **args);
+int shell_exit(char **args);
+
+char *builtin_str[] = {
+    "help",
+    "exit"};
+
+int (*builtin_func[])(char **) = {
+    &shell_help,
+    &shell_exit};
+
+int shell_num_builtins()
+{
+    return sizeof(builtin_str) / sizeof(char *);
+}
+
+int shell_help(char **args)
+{
+    fputs("Hydra Shell v1.0\n", stdout);
+    return 0;
+}
+
+int shell_exit(char **args)
+{
+    syscall_exit(0);
+}
+
+char line[50];
+char *shell_getline(char *line)
 {
     line[0] = 0;
 
@@ -28,57 +60,110 @@ uint8_t shell_get_line(char *line)
 
     line[size] = 0;
 
-    return size;
+    return line;
 }
 
-int64_t start_process(const char *path)
+char **split_line(char *line)
+{
+    int bufsize = TOKEN_BUFFER_SIZE;
+    int pos = 0;
+
+    char **tokens = malloc(bufsize * sizeof(char *));
+    if (tokens == NULL)
+    {
+        fputs("allocation failure", stdout);
+        syscall_exit(1);
+    }
+
+    char *token = strtok(line, TOKEN_DELIM);
+    while (token != NULL)
+    {
+        tokens[pos++] = token;
+
+        if (pos >= bufsize)
+        {
+            bufsize += TOKEN_BUFFER_SIZE;
+            tokens = realloc(tokens, bufsize * sizeof(char *));
+            if (tokens == NULL)
+            {
+                fputs("allocation failure", stdout);
+                syscall_exit(1);
+            }
+        }
+
+        token = strtok(NULL, TOKEN_DELIM);
+    }
+
+    tokens[pos] = NULL;
+    return tokens;
+}
+
+int shell_launch(char **args)
 {
     int64_t pid = syscall_fork();
     if (pid < 0)
     {
-        fputs("Failed to fork process\n", stdout);
+        fputs("failed to fork process\n", stdout);
+        syscall_exit(1);
+    }
+    
+    if (pid == 0)
+    {
+        syscall_exec(args[0]);
+
+        fputs("failed to execute process\n", stdout);
         syscall_exit(1);
     }
 
-    if (pid == 0)
-    {
-        syscall_exec(path);
-
-        fputs("Failed to execute process\n", stdout);
-        return -1;
-    }
+    while (syscall_ping(pid) == pid);
 
     return pid;
 }
 
-int main(void)
+int shell_execute(char **args)
 {
-    fputs("Hydra Shell\n", stdout);
-
-    char line[50];
-    while (1)
+    if (args[0] == NULL)
     {
-        fputs("hysh > ", stdout);
-
-        uint8_t size = shell_get_line(line);
-        if (strcmp(line, "exit") == 0)
-        {
-            syscall_exit(0);
-        }
-        else if (strcmp(line, "help") == 0)
-        {
-            fputs("- help: print list of commands\n- exit: quit instance of shell\n- <program name>: execute program from full path\n", stdout);
-            continue;
-        }
-
-        int64_t pid = start_process(line);
-        if (pid < 0)
-        {
-            return 1;
-        }
-
-        while (syscall_ping(pid) == pid);
+        return 0;
     }
 
+    for (int i = 0; i < shell_num_builtins(); i++)
+    {
+        if (strcmp(args[0], builtin_str[i]) == 0)
+        {
+            return (*builtin_func[i])(args);
+        }
+    }
+
+    return shell_launch(args);
+}
+
+void shell_loop(void)
+{
+    shell_getline(line);
+    if (!line)
+    {
+        return;
+    }
+
+    char **args = split_line(line);
+    if (!args)
+    {
+        return;
+    }
+
+    if (shell_execute(args) != 0)
+    {
+        return;
+    }
+}
+
+int main(void)
+{
+    while (1)
+    {
+        printf("> ");
+        shell_loop();
+    }
     return 0;
 }
