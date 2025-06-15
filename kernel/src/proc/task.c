@@ -245,6 +245,14 @@ process_t *process_clone(process_t *_proc)
     return proc;
 }
 
+int process_set_args(process_t *proc, char **args, uint16_t num_args)
+{
+    proc->num_arguments = num_args;
+    proc->arguments = args;
+
+    return RES_SUCCESS;
+}
+
 void *process_allocate_page(process_t *proc)
 {
     size_t index = proc->num_heap_pages++;
@@ -318,6 +326,15 @@ void process_free(process_t *proc)
     if (!proc)
     {
         return;
+    }
+
+    if (proc->arguments != NULL)
+    {
+        for (uint16_t i = 0; i < proc->num_arguments; i++)
+        {
+            kfree(proc->arguments[i]);
+        }
+        kfree(proc->arguments);
     }
 
     if (proc->elf)

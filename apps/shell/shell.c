@@ -109,7 +109,10 @@ int shell_launch(char **args)
     
     if (pid == 0)
     {
-        syscall_exec(args[0]);
+        uint16_t num_args;
+        for (num_args = 0; args[num_args] != NULL; num_args++);
+
+        syscall_exec(args[0], num_args, args);
 
         fputs("failed to execute process\n", stdout);
         syscall_exit(1);

@@ -12,18 +12,12 @@ _start:
     push qword rbp
     mov qword rbp, rsp
 
-    push qword rsi
-    push qword rdi
+    call initialize_standard_library
 
-	call initialize_standard_library
-
-    pop qword rdi
-    pop qword rsi
-
-	call main
+    call main
 
     ;mov edi, eax
-	;call exit
+    ;call exit
 
     mov edi, eax
     mov rax, 3
