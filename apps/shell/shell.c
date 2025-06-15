@@ -7,22 +7,6 @@
 #define TOKEN_BUFFER_SIZE 8
 #define TOKEN_DELIM " \t\r\n\a"
 
-int shell_help(char **args);
-int shell_exit(char **args);
-
-char *builtin_str[] = {
-    "help",
-    "exit"};
-
-int (*builtin_func[])(char **) = {
-    &shell_help,
-    &shell_exit};
-
-int shell_num_builtins()
-{
-    return sizeof(builtin_str) / sizeof(char *);
-}
-
 int shell_help(char **args)
 {
     fputs("Hydra Shell v1.0\n", stdout);
@@ -112,7 +96,8 @@ int shell_launch(char **args)
         uint16_t num_args;
         for (num_args = 0; args[num_args] != NULL; num_args++);
 
-        syscall_exec(args[0], num_args, args);
+        printf("executing %s\n", args[0]);
+        syscall_exec(args[0], num_args, (const char **)args);
 
         fputs("failed to execute process\n", stdout);
         syscall_exit(1);
@@ -130,12 +115,13 @@ int shell_execute(char **args)
         return 0;
     }
 
-    for (int i = 0; i < shell_num_builtins(); i++)
+    if (strcmp(args[0], "exit") == 0)
     {
-        if (strcmp(args[0], builtin_str[i]) == 0)
-        {
-            return (*builtin_func[i])(args);
-        }
+        return shell_exit(args);
+    }
+    else if (strcmp(args[0], "help") == 0)
+    {
+        return shell_help(args);
     }
 
     return shell_launch(args);

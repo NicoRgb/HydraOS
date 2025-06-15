@@ -72,6 +72,7 @@ void process_free(process_t *proc);
 process_t *process_clone(process_t *proc);
 
 int process_set_args(process_t *proc, char **args, uint16_t num_args);
+int setup_initial_stack(process_t *proc);
 void *process_allocate_page(process_t *proc);
 size_t process_insert_stream(process_t *proc, stream_t *stream);
 size_t process_insert_file(process_t *proc, const char *path, uint8_t open_action);

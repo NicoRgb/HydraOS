@@ -80,7 +80,7 @@ process_t *process_create(const char *path)
 
     memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t));
 
-    proc->task.state.rsp = PROCESS_STACK_VADDR_BASE + PROCESS_STACK_SIZE;
+    proc->task.state.rsp = PROCESS_STACK_VADDR_BASE + PROCESS_STACK_SIZE - 16;
     proc->next = NULL;
 
     proc->pid = current_pid++;
@@ -241,7 +241,7 @@ process_t *process_clone(process_t *_proc)
 
     elf_free(proc->elf);
     proc->elf = NULL;
-    
+
     return proc;
 }
 
@@ -249,6 +249,47 @@ int process_set_args(process_t *proc, char **args, uint16_t num_args)
 {
     proc->num_arguments = num_args;
     proc->arguments = args;
+
+    return RES_SUCCESS;
+}
+
+int setup_initial_stack(process_t *proc)
+{
+    LOG_DEBUG("rsp: %p", (uint8_t *)proc->task.state.rsp);
+    uint8_t *stack_top = (uint8_t *)pml4_get_phys(proc->pml4, (void *)proc->task.state.rsp, true);
+    LOG_DEBUG("phys: %p", stack_top);
+    uint8_t *sp = stack_top;
+    memset(stack_top, 0xCC, PAGE_SIZE);
+    LOG_DEBUG("arg0: %s", proc->arguments[0]);
+
+    char **argv_pointers = (char **)kmalloc(proc->num_arguments * sizeof(char *));
+
+    for (int i = proc->num_arguments - 1; i >= 0; i--)
+    {
+        size_t len = strlen(proc->arguments[i]) + 1;
+        sp -= len;
+        sp = (uint8_t *)((uintptr_t)sp & ~0xF);
+        memcpy(sp, proc->arguments[i], len);
+        argv_pointers[i] = (char *)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
+    }
+
+    sp -= sizeof(char *);
+    *(char **)sp = NULL;
+
+    for (int i = proc->num_arguments - 1; i >= 0; i--)
+    {
+        sp -= sizeof(char *);
+        *(char **)sp = argv_pointers[i];
+    }
+
+    char **argv_start = (char **)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
+
+    sp -= sizeof(int);
+    *(int *)sp = proc->num_arguments;
+
+    proc->task.state.rsp -= (uint64_t)stack_top - (uint64_t)sp;
+    proc->task.state.rdi = proc->num_arguments;
+    proc->task.state.rsi = (uint64_t)argv_start;
 
     return RES_SUCCESS;
 }
@@ -386,7 +427,8 @@ int process_register(process_t *proc)
     }
 
     process_t *tail = NULL;
-    for (tail = proc_head; tail->next != NULL; tail = tail->next);
+    for (tail = proc_head; tail->next != NULL; tail = tail->next)
+        ;
     if (!tail)
     {
         return -RES_CORRUPT;

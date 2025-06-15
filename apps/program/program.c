@@ -1,9 +1,14 @@
 #include <hydra/kernel.h>
 #include <stdio.h>
 
-int main(void)
+int main(int argc, char **argv)
 {
     fputs("HydraOS Version 0.1 Early Development\nCopyright Nico Grundei 2025\n", stdout);
+
+    for (int i = 0; i < argc; i++)
+    {
+        printf("%s\n", argv[i]);
+    }
 
     FILE *fp = fopen("0:/test.txt", "c");
     if (!fp)

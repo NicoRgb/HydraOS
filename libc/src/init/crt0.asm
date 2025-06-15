@@ -2,8 +2,10 @@ bits 64
 section .text
 
 extern main
-;extern exit
 extern initialize_standard_library
+
+extern _argc
+extern _argv
 
 global _start
 _start:
@@ -12,12 +14,15 @@ _start:
     push qword rbp
     mov qword rbp, rsp
 
+    push qword rdi
+    push qword rsi
+
     call initialize_standard_library
 
-    call main
+    pop qword rsi
+    pop qword rdi
 
-    ;mov edi, eax
-    ;call exit
+    call main
 
     mov edi, eax
     mov rax, 3

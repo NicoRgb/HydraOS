@@ -13,7 +13,6 @@
 #define _SYSCALL_ALLOC 6
 #define _SYSCALL_OPEN 7
 #define _SYSCALL_CLOSE 8
-#define _SYSCALL_GETARG 9
 
 uint64_t syscall(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6);
 
@@ -26,6 +25,5 @@ void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args);
 void *syscall_alloc(void);
 uint64_t syscall_open(const uint8_t *path, uint8_t open_actions);
 void syscall_close(uint64_t stream);
-void syscall_getarg(uint16_t index, char *ptr);
 
 #endif

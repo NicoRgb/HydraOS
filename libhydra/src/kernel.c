@@ -63,8 +63,3 @@ void syscall_close(uint64_t stream)
 {
     syscall(_SYSCALL_CLOSE, stream, 0, 0, 0, 0, 0);
 }
-
-void syscall_getarg(uint16_t index, char *ptr)
-{
-    syscall(_SYSCALL_GETARG, (uint64_t)index, (uint64_t)ptr, 0, 0, 0, 0);
-}

@@ -119,7 +119,7 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
 
     for (uint16_t i = 0; i < num_args; i++)
     {
-        strcpy(arguments[i], process_get_pointer(proc, (uintptr_t)args[i]));
+        arguments[i] = strdup(process_get_pointer(proc, (uintptr_t)args[i]));
         if (!arguments[i])
         {
             PANIC("out of kernel heap memory");
@@ -127,6 +127,7 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
     }
 
     process_set_args(exec, arguments, num_args);
+    setup_initial_stack(exec);
 
     exec->pid = pid;
     
@@ -158,23 +159,6 @@ int64_t syscall_open(process_t *proc, int64_t _path, int64_t _open_actions, int6
 int64_t syscall_close(process_t *proc, int64_t stream, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
     process_remove_stream(proc, (size_t)stream);
-    return 0;
-}
-
-int64_t syscall_getarg(process_t *proc, int64_t index, int64_t _ptr, int64_t, int64_t, int64_t, int64_t, task_state_t *)
-{
-    if (_ptr == 0)
-    {
-        if (index >= proc->num_arguments)
-        {
-            return 0;
-        }
-        return strlen(proc->arguments[index]);
-    }
-
-    const char *ptr = process_get_pointer(proc, (uintptr_t)_ptr);
-    strcpy(ptr, proc->arguments[index]);
-
     return 0;
 }
 
@@ -227,8 +211,6 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
     case 8:
         res = syscall_close(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
-    case 9:
-        res = syscall_getarg(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
     default:
         break;
     }
