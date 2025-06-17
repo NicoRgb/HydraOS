@@ -60,6 +60,9 @@ typedef struct _process
     char **arguments;
     uint16_t num_arguments;
 
+    char **envars;
+    uint16_t num_envars;
+
     uint64_t pid;
     
     struct _process *next;
@@ -72,6 +75,7 @@ void process_free(process_t *proc);
 process_t *process_clone(process_t *proc);
 
 int process_set_args(process_t *proc, char **args, uint16_t num_args);
+int process_set_envars(process_t *proc, char **envars, uint16_t num_envars);
 int setup_initial_stack(process_t *proc);
 void *process_allocate_page(process_t *proc);
 size_t process_insert_stream(process_t *proc, stream_t *stream);

@@ -5,7 +5,7 @@ uint64_t syscall_write(uint64_t stream, const uint8_t *data, size_t size);
 
 int fputc(char c, FILE *f)
 {
-    if ((int64_t)syscall_write((uint64_t)f, &c, 1) < 0)
+    if ((int64_t)syscall_write((uint64_t)f, (const uint8_t *)&c, 1) < 0)
     {
         return -1;
     }

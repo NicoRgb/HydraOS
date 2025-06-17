@@ -30,7 +30,7 @@ typedef struct
         struct
         {
             file_node_t *node;
-            const char *path;
+            char *path;
             uint8_t open_action;
         };
 

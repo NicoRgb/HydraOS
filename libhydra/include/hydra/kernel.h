@@ -21,7 +21,7 @@ uint64_t syscall_write(uint64_t stream, const uint8_t *data, size_t size);
 uint64_t syscall_fork(void);
 void syscall_exit(uint32_t result);
 uint64_t syscall_ping(uint64_t pid);
-void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args);
+void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args, uint16_t num_envars, const char **envars);
 void *syscall_alloc(void);
 uint64_t syscall_open(const uint8_t *path, uint8_t open_actions);
 void syscall_close(uint64_t stream);

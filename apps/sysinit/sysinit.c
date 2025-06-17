@@ -12,7 +12,7 @@ int64_t start_shell(void)
 
     if (pid == 0)
     {
-        syscall_exec("0:/bin/shell", 0, NULL);
+        syscall_exec("0:/bin/shell", 0, NULL, 0, NULL);
 
         fputs("SYSINIT -- ERROR UNRECOVERABLE -- FAILED TO EXECUTE PROCESS\n", stdout);
         syscall_exit(1);

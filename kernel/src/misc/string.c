@@ -41,11 +41,15 @@ int strncmp(const char *s1, const char *s2, size_t n)
 
 char *strcpy(char *to, char *from)
 {
-    char *save = to;
+    size_t i = 0;
+    for (i = 0; from[i] != 0x00; i++)
+    {
+        to[i] = from[i];
+    }
 
-    for (; *to = *from; ++from, ++to)
-        ;
-    return (save);
+    to[i] = 0;
+
+    return to;
 }
 
 void *memset(void *dest, register int val, register size_t len)
@@ -239,8 +243,8 @@ long strtol(const char *nPtr, char **endPtr, int base)
         }
 
         if (!correctconversion ||
-            number > cutoff ||
-            (number == cutoff && currentdigit > cutlim))
+            number > (long)cutoff ||
+            (number == (long)cutoff && currentdigit > cutlim))
         {
             correctconversion = false;
         }

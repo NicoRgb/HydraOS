@@ -44,11 +44,11 @@ uint64_t syscall_ping(uint64_t pid)
     return syscall(_SYSCALL_PING, pid, 0, 0, 0, 0, 0);
 }
 
-void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args)
+void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args, uint16_t num_envars, const char **envars)
 {
-    syscall(_SYSCALL_EXEC, (uint64_t)path, (uint64_t)num_args, (uint64_t)args, 0, 0, 0);
+    syscall(_SYSCALL_EXEC, (uint64_t)path, (uint64_t)num_args, (uint64_t)args, (uint64_t)num_envars, (uint64_t)envars, 0);
 }
-
+ 
 void *syscall_alloc(void)
 {
     return (void *)syscall(_SYSCALL_ALLOC, 0, 0, 0, 0, 0, 0);

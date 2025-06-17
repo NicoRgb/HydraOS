@@ -12,7 +12,7 @@ int kmm_init(size_t initial_size, size_t _alignment);
 
 void syscall_exit(uint32_t result);
 
-void initialize_standard_library()
+void initialize_standard_library(int argc, char **argv, int envc, char **envp)
 {
     _stdin = 0;
     _stdout = 1;

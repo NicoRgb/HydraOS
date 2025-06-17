@@ -14,6 +14,8 @@ typedef struct buddy_header
 
 void *realloc(void *p, size_t s)
 {
+    (void)p;
+    (void)s;
     //buddy_header_t *buddy = (buddy_header_t *)((uintptr_t)p - alignment);
 
     //void *res = malloc(s);

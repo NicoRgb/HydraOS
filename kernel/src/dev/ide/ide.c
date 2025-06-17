@@ -258,7 +258,7 @@ uint8_t ide_poll(uint8_t channel, uint32_t advanced_check)
     return 0;
 }
 
-static uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint64_t lba, uint8_t numsects, uint8_t *buf)
+static uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint64_t lba, uint8_t numsects, const uint8_t *buf_in, uint8_t *buf_out)
 {
     uint8_t lba_mode, dma, cmd;
     uint8_t lba_io[6];
@@ -361,8 +361,8 @@ static uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint64_t lba, ui
 
             for (uint32_t j = 0; j < words; j++)
             {
-                *((uint16_t *)buf) = port_word_in(bus);
-                buf += 2;
+                *((uint16_t *)buf_out) = port_word_in(bus);
+                buf_out += 2;
             }
         }
     }
@@ -378,8 +378,8 @@ static uint8_t ide_ata_access(uint8_t direction, uint8_t drive, uint64_t lba, ui
 
             for (uint32_t j = 0; j < words; j++)
             {
-                port_word_out(bus, *((uint16_t *)buf));
-                buf += 2;
+                port_word_out(bus, *((uint16_t *)buf_in));
+                buf_in += 2;
             }
 
             ide_write(channel, ATA_REG_COMMAND, (char []) { ATA_CMD_CACHE_FLUSH,
@@ -595,7 +595,7 @@ int ide_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev)
     uint8_t err = 0;
     if (dev->type == IDE_ATA)
     {
-        err = ide_ata_access(ATA_READ, bdev->_data, lba, 1, data);
+        err = ide_ata_access(ATA_READ, bdev->_data, lba, 1, NULL, data);
     }
     else if (dev->type == IDE_ATAPI)
     {
@@ -627,7 +627,7 @@ int ide_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
     uint8_t err = 0;
     if (dev->type == IDE_ATA)
     {
-        err = ide_ata_access(ATA_WRITE, bdev->_data, lba, 1, data);
+        err = ide_ata_access(ATA_WRITE, bdev->_data, lba, 1, data, NULL);
     }
     else if (dev->type == IDE_ATAPI)
     {

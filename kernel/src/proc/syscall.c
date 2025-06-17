@@ -99,10 +99,11 @@ int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_
     return 0;
 }
 
-int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _args, int64_t, int64_t, int64_t, task_state_t *)
+int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _args, int64_t num_envars, int64_t _envars, int64_t, task_state_t *)
 {
     const char *path = process_get_pointer(proc, (uintptr_t)_path);
     const char **args = (const char **)process_get_pointer(proc, (uintptr_t)_args);
+    const char **envars = (const char **)process_get_pointer(proc, (uintptr_t)_envars);
     uint64_t pid = proc->pid;
 
     process_t *exec = process_create(path);
@@ -126,7 +127,23 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
         }
     }
 
+    char **environment_variables = kmalloc(num_envars * sizeof(char *));
+    if (!environment_variables)
+    {
+        PANIC("out of kernel heap memory");
+    }
+
+    for (uint16_t i = 0; i < num_envars; i++)
+    {
+        environment_variables[i] = strdup(process_get_pointer(proc, (uintptr_t)envars[i]));
+        if (!environment_variables[i])
+        {
+            PANIC("out of kernel heap memory");
+        }
+    }
+
     process_set_args(exec, arguments, num_args);
+    process_set_envars(exec, environment_variables, num_envars);
     setup_initial_stack(exec);
 
     exec->pid = pid;

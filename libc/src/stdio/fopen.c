@@ -32,5 +32,5 @@ FILE *fopen(const char *s, const char *a)
         break;
     }
 
-    return (FILE *)syscall_open(s, open_actions);
+    return (FILE *)syscall_open((const uint8_t *)s, open_actions);
 }

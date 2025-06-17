@@ -52,8 +52,8 @@ bool buddy_is_free(buddy_header_t *buddy)
 int size_to_order(size_t size)
 {
     size_t normalized = size < MIN_BUDDY_SIZE ? MIN_BUDDY_SIZE : size;
-    int order = 0;
-    while ((MIN_BUDDY_SIZE << order) < normalized && order < MAX_ORDER - 1)
+    size_t order = 0;
+    while ((size_t)(MIN_BUDDY_SIZE << order) < normalized && order < MAX_ORDER - 1)
     {
         order++;
     }
@@ -261,7 +261,7 @@ int kmm_init(size_t initial_size, size_t _alignment)
     void *base = syscall_alloc();
 
     initial_size = align_forward_size(initial_size, PAGE_SIZE);
-    for (int i = 1; i < initial_size / PAGE_SIZE; i++)
+    for (size_t i = 1; i < initial_size / PAGE_SIZE; i++)
     {
         syscall_alloc();
     }

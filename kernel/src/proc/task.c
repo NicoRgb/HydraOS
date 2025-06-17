@@ -253,14 +253,18 @@ int process_set_args(process_t *proc, char **args, uint16_t num_args)
     return RES_SUCCESS;
 }
 
+int process_set_envars(process_t *proc, char **envars, uint16_t num_envars)
+{
+    proc->num_envars = num_envars;
+    proc->envars = envars;
+
+    return RES_SUCCESS;
+}
+
 int setup_initial_stack(process_t *proc)
 {
-    LOG_DEBUG("rsp: %p", (uint8_t *)proc->task.state.rsp);
     uint8_t *stack_top = (uint8_t *)pml4_get_phys(proc->pml4, (void *)proc->task.state.rsp, true);
-    LOG_DEBUG("phys: %p", stack_top);
     uint8_t *sp = stack_top;
-    memset(stack_top, 0xCC, PAGE_SIZE);
-    LOG_DEBUG("arg0: %s", proc->arguments[0]);
 
     char **argv_pointers = (char **)kmalloc(proc->num_arguments * sizeof(char *));
 
@@ -273,8 +277,19 @@ int setup_initial_stack(process_t *proc)
         argv_pointers[i] = (char *)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
     }
 
-    sp -= sizeof(char *);
-    *(char **)sp = NULL;
+    char **envar_pointers = (char **)kmalloc(proc->num_arguments * sizeof(char *));
+
+    for (int i = proc->num_envars - 1; i >= 0; i--)
+    {
+        size_t len = strlen(proc->envars[i]) + 1;
+        sp -= len;
+        sp = (uint8_t *)((uintptr_t)sp & ~0xF);
+        memcpy(sp, proc->envars[i], len);
+        envar_pointers[i] = (char *)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
+    }
+
+    sp -= sizeof(int);
+    *(int *)sp = proc->num_arguments;
 
     for (int i = proc->num_arguments - 1; i >= 0; i--)
     {
@@ -284,12 +299,25 @@ int setup_initial_stack(process_t *proc)
 
     char **argv_start = (char **)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
 
-    sp -= sizeof(int);
-    *(int *)sp = proc->num_arguments;
+    sp -= sizeof(char *);
+    *(char **)sp = NULL;
+
+    for (int i = proc->num_envars - 1; i >= 0; i--)
+    {
+        sp -= sizeof(char *);
+        *(char **)sp = envar_pointers[i];
+    }
+
+    char **envp_start = (char **)(proc->task.state.rsp - ((uint64_t)stack_top - (uint64_t)sp));
+
+    sp -= sizeof(char *);
+    *(char **)sp = NULL;
 
     proc->task.state.rsp -= (uint64_t)stack_top - (uint64_t)sp;
     proc->task.state.rdi = proc->num_arguments;
     proc->task.state.rsi = (uint64_t)argv_start;
+    proc->task.state.rdx = proc->num_envars;
+    proc->task.state.rcx = (uint64_t)envp_start;
 
     return RES_SUCCESS;
 }

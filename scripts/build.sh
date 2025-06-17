@@ -5,6 +5,8 @@ set -e
 DIR="`dirname "${BASH_SOURCE[0]}"`"
 cd "$DIR" || exit
 
+HYDRAOS_BOOT_SYSTEM='GRUB'
+
 # rm -rf /tmp/hydra_root | true
 
 mkdir -p /tmp/hydra_root/

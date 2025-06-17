@@ -97,7 +97,8 @@ int shell_launch(char **args)
         for (num_args = 0; args[num_args] != NULL; num_args++);
 
         printf("executing %s\n", args[0]);
-        syscall_exec(args[0], num_args, (const char **)args);
+        const char *env = "shell=hysh";
+        syscall_exec(args[0], num_args, (const char **)args, 1, &env);
 
         fputs("failed to execute process\n", stdout);
         syscall_exit(1);

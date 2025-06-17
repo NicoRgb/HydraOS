@@ -1,6 +1,7 @@
 #include <kernel/kmm.h>
 #include <kernel/pmm.h>
 #include <kernel/string.h>
+#include <kernel/dbg.h>
 #include <stdbool.h>
 
 #define MIN_BUDDY_SIZE 64
@@ -49,8 +50,8 @@ bool buddy_is_free(buddy_header_t *buddy)
 int size_to_order(size_t size)
 {
     size_t normalized = size < MIN_BUDDY_SIZE ? MIN_BUDDY_SIZE : size;
-    int order = 0;
-    while ((MIN_BUDDY_SIZE << order) < normalized && order < MAX_ORDER - 1)
+    size_t order = 0;
+    while ((size_t)(MIN_BUDDY_SIZE << order) < normalized && order < MAX_ORDER - 1)
     {
         order++;
     }
@@ -323,6 +324,7 @@ void *kmalloc(size_t size)
     if (size >= PAGE_SIZE)
     {
         LOG_WARNING("buddy allocation greather than one page, size %lld", size);
+        trace_stack(32);
     }
 
     void *res = buddy_allocator_alloc(size);
