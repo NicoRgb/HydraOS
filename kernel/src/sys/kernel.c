@@ -15,8 +15,9 @@
 #include <kernel/proc/scheduler.h>
 #include <kernel/pit.h>
 
-extern partition_table_t mbr_partition_table;
-extern filesystem_t fat32_filesystem;
+extern driver_t e9_driver;
+extern driver_t vga_driver;
+extern driver_t ps2_driver;
 
 boot_info_t boot_info;
 
@@ -270,6 +271,26 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
 
     enable_interrupts();
 
+    LOG_INFO("early initialization complete");
+}
+
+void kmain()
+{
+    if (IS_ERROR(register_driver(&e9_driver)))
+    {
+        PANIC("failed to register driver");
+    }
+
+    if (IS_ERROR(register_driver(&vga_driver)))
+    {
+        PANIC("failed to register driver");
+    }
+
+    if (IS_ERROR(register_driver(&ps2_driver)))
+    {
+        PANIC("failed to register driver");
+    }
+
     if (IS_ERROR(init_devices()))
     {
         PANIC("failed to initialize devices");
@@ -280,11 +301,6 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
         PANIC("failed to initialize kprintf");
     }
 
-    LOG_INFO("early initialization complete");
-}
-
-void kmain()
-{
     uint64_t i = 0;
     blockdev_t *bdev = NULL;
     do

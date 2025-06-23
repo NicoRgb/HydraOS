@@ -14,4 +14,13 @@ void pmm_free(uint64_t *page);
 
 uint64_t get_max_addr(void);
 
+typedef struct
+{
+    uintptr_t address;
+    uintptr_t max_address;
+} slab_allocator_t;
+
+void slab_init(slab_allocator_t *slab, void *page);
+void *slab_alloc(slab_allocator_t *slab, uint8_t size);
+
 #endif

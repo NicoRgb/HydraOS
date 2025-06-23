@@ -12,11 +12,7 @@
 #define MAX_FUNCTION 8
 #define MAX_PCI_DEVICES (MAX_BUS * MAX_DEVICE * MAX_FUNCTION)
 
-#define PCI_CLASS_DISPLAY_CONTROLLER 0x03
-#define PCI_CLASS_MASS_STORAGE_CONTROLLER 0x01
-
-#define PCI_SUBCLASS_VGA_COMP_CONTROLLER 0x00
-#define PCI_SUBCLASS_IDE_CONTROLLER 0x01
+#define PCI_SUBCLASS_DISPLAY_CONTROLLER_OTHER 0x80
 
 enum bar_type
 {
@@ -32,7 +28,7 @@ typedef struct
     enum bar_type type;
 } base_address_register_t;
 
-typedef struct
+typedef struct _pci_device
 {
     uint8_t bus;
     uint8_t device;
@@ -45,6 +41,8 @@ typedef struct
     uint8_t header_type;
     base_address_register_t bars[MAX_BARS];
 } pci_device_t;
+
+uint32_t pci_read(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset);
 
 int pci_init(void);
 void pci_free(void);

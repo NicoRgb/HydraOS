@@ -1,4 +1,5 @@
 #include <kernel/dev/chardev.h>
+#include <kernel/dev/devm.h>
 #include <kernel/kmm.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -103,8 +104,11 @@ int vga_free(chardev_t *cdev)
     return 0;
 }
 
-chardev_t *vga_create(void)
+chardev_t *vga_create(size_t index, struct _pci_device *pci_dev)
 {
+    (void)index;
+    (void)pci_dev;
+
     if (vga_initialized)
     {
         return NULL;
@@ -132,3 +136,21 @@ chardev_t *vga_create(void)
 
     return cdev;
 }
+
+#define PCI_CLASS_DISPLAY_CONTROLLER 0x03
+#define PCI_SUBCLASS_VGA_COMP_CONTROLLER 0x00
+
+driver_t vga_driver = {
+    .device_type = DEVICE_TYPE_CHARDEV,
+    .num_devices = 1,
+    .create_cdev = &vga_create,
+
+    .class_code = PCI_CLASS_DISPLAY_CONTROLLER,
+    .subclass_code = PCI_SUBCLASS_VGA_COMP_CONTROLLER,
+    .prog_if = 0xFF,
+
+    .driver_name = "VGA Compatability Mode Output",
+    .device_name = "Virtual Terminal",
+    .module = "none",
+    .author = "Nico Grundei"
+};

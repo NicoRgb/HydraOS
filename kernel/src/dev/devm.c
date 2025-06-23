@@ -1,162 +1,107 @@
 #include <kernel/dev/devm.h>
 #include <kernel/dev/pci.h>
 #include <kernel/kmm.h>
+#include <kernel/vec.h>
 
-chardev_t *e9_create(void);
-chardev_t *vga_create(void);
+cvector(chardev_t *) chardevs = CVECTOR;
+cvector(blockdev_t *) blockdevs = CVECTOR;
+cvector(inputdev_t *) inputdevs = CVECTOR;
 
-blockdev_t *ide_create(size_t index, pci_device_t *pci_device);
+cvector(driver_t *) driver = CVECTOR;
 
-inputdev_t *ps2_create(void);
-
-#define CHARDEVS_CAPACITY_INCREASE 3
-
-chardev_t **chardevs = NULL;
-size_t chardevs_capacity = 0;
-size_t chardevs_size = 0;
-
-#define BLOCKDEVS_CAPACITY_INCREASE 3
-
-blockdev_t **blockdevs = NULL;
-size_t blockdevs_capacity = 0;
-size_t blockdevs_size = 0;
-
-#define INPUTDEVS_CAPACITY_INCREASE 3
-
-inputdev_t **inputdevs = NULL;
-size_t inputdevs_capacity = 0;
-size_t inputdevs_size = 0;
-
-static KRES init_char_devices(void)
+KRES register_driver(driver_t *d)
 {
-    chardevs = kmalloc(sizeof(chardev_t *) * CHARDEVS_CAPACITY_INCREASE);
-    if (!chardevs)
-    {
-        return -RES_NOMEM;
-    }
-
-    chardevs_capacity = CHARDEVS_CAPACITY_INCREASE;
-    chardevs_size = 0;
-
-    chardevs[chardevs_size] = e9_create();
-    if (!chardevs[chardevs_size])
-    {
-        return -RES_EUNKNOWN;
-    }
-    chardevs_size++;
-
-    return 0;
-}
-
-static KRES init_block_devices(void)
-{
-    blockdevs = kmalloc(sizeof(blockdev_t *) * BLOCKDEVS_CAPACITY_INCREASE);
-    if (!blockdevs)
-    {
-        return -RES_NOMEM;
-    }
-
-    blockdevs_capacity = BLOCKDEVS_CAPACITY_INCREASE;
-    blockdevs_size = 0;
-
-    return 0;
-}
-
-static KRES init_input_devices(void)
-{
-    inputdevs = kmalloc(sizeof(inputdev_t *) * INPUTDEVS_CAPACITY_INCREASE);
-    if (!inputdevs)
-    {
-        return -RES_NOMEM;
-    }
-
-    inputdevs_capacity = INPUTDEVS_CAPACITY_INCREASE;
-    inputdevs_size = 0;
-
-    inputdevs[inputdevs_size] = ps2_create();
-    if (!inputdevs[inputdevs_size])
-    {
-        return -RES_NOMEM;
-    }
-    inputdevs_size++;
-
-    return 0;
-}
-
-static KRES try_init_char_device(pci_device_t *pci_dev)
-{
-    if (pci_dev->class_code != PCI_CLASS_DISPLAY_CONTROLLER)
+    if (!d)
     {
         return -RES_INVARG;
     }
 
-    if (pci_dev->subclass_code == PCI_SUBCLASS_VGA_COMP_CONTROLLER)
-    {
-        if (chardevs_size >= chardevs_capacity)
-        {
-            chardevs = krealloc(chardevs, chardevs_capacity, chardevs_capacity + sizeof(chardev_t *) * CHARDEVS_CAPACITY_INCREASE);
-            chardevs_capacity += CHARDEVS_CAPACITY_INCREASE;
-        }
+    LOG_INFO("Registered Driver '%s' (module %s) by %s", d->driver_name, d->module, d->author);
 
-        chardevs[chardevs_size] = vga_create();
-        if (!chardevs[chardevs_size])
-        {
-            return -RES_EUNKNOWN;
-        }
-        chardevs_size++;
-        return 0;
-    }
-
+    cvector_push(driver, d);
     return 0;
 }
 
-static KRES try_init_block_device(pci_device_t *pci_dev)
+bool driver_matches(const driver_t *d, const pci_device_t *dev)
 {
-    if (pci_dev->class_code != PCI_CLASS_MASS_STORAGE_CONTROLLER)
+    if (d->class_code != dev->class_code)
     {
-        return -RES_INVARG;
+        return false;
+    }
+    if (d->subclass_code != 0xFF && d->subclass_code != dev->subclass_code)
+    {
+        return false;
+    }
+    if (d->prog_if != 0xFF && d->prog_if != dev->prog_if)
+    {
+        return false;
     }
 
-    if (pci_dev->subclass_code == PCI_SUBCLASS_IDE_CONTROLLER)
-    {
-        if (blockdevs_size >= blockdevs_capacity)
-        {
-            blockdevs = krealloc(blockdevs, blockdevs_capacity, blockdevs_capacity + sizeof(blockdev_t *) * BLOCKDEVS_CAPACITY_INCREASE);
-            blockdevs_capacity += BLOCKDEVS_CAPACITY_INCREASE;
-        }
+    return true;
+}
 
-        for (size_t i = 0; i < 4; i++)
+void driver_instatiate(const driver_t *d)
+{
+    for (int k = 0; k < d->num_devices; k++)
+    {
+        switch (d->device_type)
         {
-            blockdevs[blockdevs_size] = ide_create(i, pci_dev);
-            if (!blockdevs[blockdevs_size])
+        case DEVICE_TYPE_CHARDEV:
+        {
+            chardev_t *cdev = d->create_cdev(k, NULL);
+            if (cdev)
             {
-                continue;
+                LOG_INFO("Initialized Character Device '%s' from '%s' (module %s) by %s",
+                         d->device_name,
+                         d->driver_name,
+                         d->module,
+                         d->author);
+                cvector_push(chardevs, cdev);
             }
-            blockdevs_size++;
+            break;
+        }
+        case DEVICE_TYPE_BLOCKDEV:
+        {
+            blockdev_t *bdev = d->create_bdev(k, NULL);
+            if (bdev)
+            {
+                LOG_INFO("Initialized Block Device '%s' from '%s' (module %s) by %s",
+                         d->device_name,
+                         d->driver_name,
+                         d->module,
+                         d->author);
+                cvector_push(blockdevs, bdev);
+            }
+            break;
+        }
+        case DEVICE_TYPE_INPUTDEV:
+        {
+            inputdev_t *idev = d->create_idev(k, NULL);
+            if (idev)
+            {
+                LOG_INFO("Initialized Input Device '%s' from '%s' (module %s) by %s",
+                         d->device_name,
+                         d->driver_name,
+                         d->module,
+                         d->author);
+                cvector_push(inputdevs, idev);
+            }
+            break;
+        }
         }
     }
-
-    return 0;
 }
 
 KRES init_devices(void)
 {
-    KRES status = init_char_devices();
-    if (status < 0)
+    for (size_t j = 0; j < cvector_size(driver); j++)
     {
-        return status;
-    }
+        if (driver[j]->class_code != 0xFF) // uses pci
+        {
+            continue;
+        }
 
-    status = init_block_devices();
-    if (status < 0)
-    {
-        return status;
-    }
-
-    status = init_input_devices();
-    if (status < 0)
-    {
-        return status;
+        driver_instatiate(driver[j]);
     }
 
     for (size_t i = 0; i < MAX_PCI_DEVICES; i++)
@@ -167,20 +112,16 @@ KRES init_devices(void)
             break;
         }
 
-        if (pci_dev->class_code == PCI_CLASS_DISPLAY_CONTROLLER)
+        for (size_t j = 0; j < cvector_size(driver); j++)
         {
-            status = try_init_char_device(pci_dev);
-            if (status < 0)
+            if (driver[j]->class_code == 0xFF)
             {
-                return status;
+                continue;
             }
-        }
-        else if (pci_dev->class_code == PCI_CLASS_MASS_STORAGE_CONTROLLER)
-        {
-            status = try_init_block_device(pci_dev);
-            if (status < 0)
+
+            if (driver_matches(driver[j], pci_dev))
             {
-                return status;
+                driver_instatiate(driver[j]);
             }
         }
     }
@@ -188,26 +129,9 @@ KRES init_devices(void)
     return 0;
 }
 
-void free_devices(void)
-{
-    for (size_t i = 0; i < chardevs_size; i++)
-    {
-        chardev_free_ref(chardevs[i]);
-    }
-
-    kfree(chardevs);
-
-    for (size_t i = 0; i < blockdevs_size; i++)
-    {
-        blockdev_free_ref(blockdevs[i]);
-    }
-
-    kfree(blockdevs);
-}
-
 chardev_t *get_chardev(size_t index)
 {
-    if (index >= chardevs_size)
+    if (index >= cvector_size(chardevs))
     {
         return NULL;
     }
@@ -217,7 +141,7 @@ chardev_t *get_chardev(size_t index)
 
 blockdev_t *get_blockdev(size_t index)
 {
-    if (index >= blockdevs_size)
+    if (index >= cvector_size(blockdevs))
     {
         return NULL;
     }
@@ -227,7 +151,7 @@ blockdev_t *get_blockdev(size_t index)
 
 inputdev_t *get_inputdev(size_t index)
 {
-    if (index >= inputdevs_size)
+    if (index >= cvector_size(inputdevs))
     {
         return NULL;
     }

@@ -118,3 +118,21 @@ uint64_t get_max_addr(void)
 {
     return page_allocator.max_addr;
 }
+
+void slab_init(slab_allocator_t *slab, void *page)
+{
+    slab->address = (uintptr_t)page;
+    slab->max_address = (uintptr_t)page + PAGE_SIZE;
+}
+
+void *slab_alloc(slab_allocator_t *slab, uint8_t size)
+{
+    if (slab->address + size >= slab->max_address)
+    {
+        return NULL;
+    }
+
+    void *addr = (void *)slab->address;
+    slab->address += size;
+    return addr;
+}

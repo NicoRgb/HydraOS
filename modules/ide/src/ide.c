@@ -1,3 +1,4 @@
+#include <ide.h>
 #include <kernel/dev/blockdev.h>
 #include <kernel/port.h>
 #include <kernel/kmm.h>

@@ -1,4 +1,5 @@
 #include <kernel/dev/inputdev.h>
+#include <kernel/dev/devm.h>
 #include <kernel/port.h>
 #include <kernel/kmm.h>
 #include <kernel/isr.h>
@@ -177,8 +178,11 @@ int ps2_free(inputdev_t *idev)
     return 0;
 }
 
-inputdev_t *ps2_create(void)
+inputdev_t *ps2_create(size_t index, struct _pci_device *pci_dev)
 {
+    (void)index;
+    (void)pci_dev;
+
     if (ps2_initialized)
     {
         return NULL;
@@ -199,3 +203,18 @@ inputdev_t *ps2_create(void)
 
     return idev;
 }
+
+driver_t ps2_driver = {
+    .device_type = DEVICE_TYPE_INPUTDEV,
+    .num_devices = 1,
+    .create_idev = &ps2_create,
+
+    .class_code = 0xFF,
+    .subclass_code = 0xFF,
+    .prog_if = 0xFF,
+
+    .driver_name = "PS2 Controller",
+    .device_name = "Keyboard",
+    .module = "none",
+    .author = "Nico Grundei"
+};

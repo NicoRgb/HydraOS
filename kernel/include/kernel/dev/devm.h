@@ -25,8 +25,34 @@ typedef struct
     };
 } device_handle_t;
 
+struct _pci_device;
+
+typedef struct
+{
+    device_handle_type_t device_type;
+    uint8_t num_devices; // one driver can create multiple device, for example ide controller
+    union
+    {
+        blockdev_t *(*create_bdev)(size_t index, struct _pci_device *pci_dev);
+        chardev_t *(*create_cdev)(size_t index, struct _pci_device *pci_dev);
+        inputdev_t *(*create_idev)(size_t index, struct _pci_device *pci_dev);
+    };
+
+    // identification
+    uint8_t class_code;
+    uint8_t subclass_code;
+    uint8_t prog_if;
+
+    // logging/debugging
+    const char *driver_name;
+    const char *device_name;
+    const char *module;
+    const char *author;
+} driver_t;
+
+KRES register_driver(driver_t *driver);
+
 KRES init_devices(void);
-void free_devices(void);
 
 chardev_t *get_chardev(size_t index);
 blockdev_t *get_blockdev(size_t index);

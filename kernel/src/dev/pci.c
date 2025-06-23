@@ -9,7 +9,7 @@ static pci_device_t *pci_devices = NULL;
 static size_t pci_device_count = 0;
 static size_t pci_device_capacity = 0;
 
-static uint32_t pci_read(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
+uint32_t pci_read(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
 {
     uint32_t id = (1 << 31) | (bus << 16) | (device << 11) | (function << 8) | (offset & 0xFC);
     port_dword_out(PCI_COMMAND_PORT, id);
