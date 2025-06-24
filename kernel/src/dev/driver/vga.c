@@ -1,4 +1,3 @@
-#include <kernel/dev/chardev.h>
 #include <kernel/dev/devm.h>
 #include <kernel/kmm.h>
 #include <stddef.h>
@@ -49,9 +48,9 @@ static void vga_backspace(void)
     col--;
 }
 
-int vga_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
+int vga_write(char c, chardev_color_t fg, chardev_color_t bg, device_t *dev)
 {
-    if (!cdev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
@@ -73,7 +72,7 @@ int vga_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
         for (uint8_t i = 0; i < 4; i++)
         {
             int res = 0;
-            if ((res = vga_write(' ', fg, bg, cdev)) != 0)
+            if ((res = vga_write(' ', fg, bg, dev)) != 0)
             {
                 return res;
             }
@@ -92,58 +91,27 @@ int vga_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
     return 0;
 }
 
-int vga_free(chardev_t *cdev)
+int vga_free(device_t *dev)
 {
-    if (!cdev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
 
-    kfree(cdev);
+    kfree(dev);
 
     return 0;
 }
 
-chardev_t *vga_create(size_t index, struct _pci_device *pci_dev)
-{
-    (void)index;
-    (void)pci_dev;
-
-    if (vga_initialized)
-    {
-        return NULL;
-    }
-
-    chardev_t *cdev = kmalloc(sizeof(chardev_t));
-    if (!cdev)
-    {
-        return NULL;
-    }
-    vga_initialized = true;
-
-    cdev->write = &vga_write;
-    cdev->free = &vga_free;
-    cdev->references = 1;
-
-    // clearing the screen
-    for (size_t row = 0; row < NUM_ROWS; row++)
-    {
-        for (size_t col = 0; col < NUM_COLS; col++)
-        {
-            vga_char_mem[col + row * NUM_COLS] = 0x0000;
-        }
-    }
-
-    return cdev;
-}
+device_t *vga_create(size_t index, struct _pci_device *pci_dev);
 
 #define PCI_CLASS_DISPLAY_CONTROLLER 0x03
 #define PCI_SUBCLASS_VGA_COMP_CONTROLLER 0x00
 
 driver_t vga_driver = {
-    .device_type = DEVICE_TYPE_CHARDEV,
+    .supported_type = DEVICE_CHAR,
     .num_devices = 1,
-    .create_cdev = &vga_create,
+    .init_device = &vga_create,
 
     .class_code = PCI_CLASS_DISPLAY_CONTROLLER,
     .subclass_code = PCI_SUBCLASS_VGA_COMP_CONTROLLER,
@@ -154,3 +122,42 @@ driver_t vga_driver = {
     .module = "none",
     .author = "Nico Grundei"
 };
+
+device_ops_t vga_ops = {
+    .free = &vga_free,
+    .write = &vga_write,
+};
+
+device_t *vga_create(size_t index, struct _pci_device *pci_dev)
+{
+    (void)index;
+    (void)pci_dev;
+
+    if (vga_initialized)
+    {
+        return NULL;
+    }
+
+    device_t *dev = kmalloc(sizeof(device_t));
+    if (!dev)
+    {
+        return NULL;
+    }
+    vga_initialized = true;
+
+    dev->type = DEVICE_CHAR;
+    dev->driver = &vga_driver;
+    dev->ops = &vga_ops;
+    dev->pci_dev = pci_dev;
+
+    // clearing the screen
+    for (size_t row = 0; row < NUM_ROWS; row++)
+    {
+        for (size_t col = 0; col < NUM_COLS; col++)
+        {
+            vga_char_mem[col + row * NUM_COLS] = 0x0000;
+        }
+    }
+
+    return dev;
+}

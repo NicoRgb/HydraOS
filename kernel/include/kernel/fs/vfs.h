@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include <kernel/status.h>
-#include <kernel/dev/blockdev.h>
 #include <kernel/fs/vpt.h>
 
 #define MAX_PATH 128

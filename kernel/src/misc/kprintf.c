@@ -2,7 +2,7 @@
 #include <kernel/ansi.h>
 #include <stdbool.h>
 
-static chardev_t *kprintf_cdev;
+static device_t *kprintf_cdev;
 static struct ansi_state ansi_state;
 
 void _putchar(char c)
@@ -22,7 +22,7 @@ void _putchar(char c)
     uint8_t fg = fore_color | (fore_bright << 3);
     uint8_t bg = back_color | (back_bright << 3);
 
-    chardev_write(ch.ascii, (chardev_color_t)fg, (chardev_color_t)bg, kprintf_cdev);
+    device_write(ch.ascii, (chardev_color_t)fg, (chardev_color_t)bg, kprintf_cdev);
 }
 
 // from https://github.com/mpaland/printf
@@ -978,7 +978,7 @@ static int _vsnprintf(out_fct_type out, char *buffer, const size_t maxlen, const
     return (int)idx;
 }
 
-int kprintf_init(chardev_t *cdev)
+int kprintf_init(device_t *cdev)
 {
     if (!cdev)
     {
@@ -991,10 +991,9 @@ int kprintf_init(chardev_t *cdev)
 
 void kprintf_free(void)
 {
-    chardev_free_ref(kprintf_cdev);
 }
 
-chardev_t *kprintf_get_cdev(void)
+device_t *kprintf_get_cdev(void)
 {
     return kprintf_cdev;
 }

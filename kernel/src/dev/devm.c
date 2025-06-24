@@ -3,10 +3,86 @@
 #include <kernel/kmm.h>
 #include <kernel/vec.h>
 
-cvector(chardev_t *) chardevs = CVECTOR;
-cvector(blockdev_t *) blockdevs = CVECTOR;
-cvector(inputdev_t *) inputdevs = CVECTOR;
+const char qwertz_normal[128] = {
+    /* 0x00 */ 0, 0, '1', '2', '3', '4', '5', '6',
+    /* 0x08 */ '7', '8', '9', '0', 0, 0, '\b', 0,
+    /* 0x10 */ 'q', 'w', 'e', 'r', 't', 'z', 'u', 'i',
+    /* 0x18 */ 'o', 'p', 0, '+', '\n', 0, 'a', 's',
+    /* 0x20 */ 'd', 'f', 'g', 'h', 'j', 'k', 'l', 0,
+    /* 0x28 */ 0, '^', 0, '#', 'y', 'x', 'c', 'v',
+    /* 0x30 */ 'b', 'n', 'm', ',', '.', '-', 0, 0, 0, ' ',
+};
 
+const char qwertz_shift[128] = {
+    /* 0x00 */ 0, 0, '!', '"', 0, '$', '%', '&',
+    /* 0x08 */ '/', '(', ')', '=', 0, 0, '\b', 0,
+    /* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I',
+    /* 0x18 */ 'O', 'P', 0, '*', '\n', 0, 'A', 'S',
+    /* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', 0,
+    /* 0x28 */ 0, 0, 0, '\'', 'Y', 'X', 'C', 'V',
+    /* 0x30 */ 'B', 'N', 'M', ';', ':', '_', 0, 0, 0, ' ',
+};
+
+const char qwertz_caps[128] = {
+    /* 0x00 */ 0, 0, '1', '2', '3', '4', '5', '6',
+    /* 0x08 */ '7', '8', '9', '0', 0, 0, '\b', 0,
+    /* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I',
+    /* 0x18 */ 'O', 'P', 0, '+', '\n', 0, 'A', 'S',
+    /* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', 0,
+    /* 0x28 */ 0, '^', 0, '#', 'Y', 'X', 'C', 'V',
+    /* 0x30 */ 'B', 'N', 'M', ',', '.', '-', 0, 0, 0, ' ',
+};
+
+char inputdev_packet_to_ascii(inputpacket_t *packet)
+{
+    if (packet->scancode >= 128)
+    {
+        return 0; // Invalid scancode
+    }
+
+    char ascii_char;
+
+    // Check if Shift or Caps Lock is active
+    if ((packet->modifier & MODIFIER_SHIFT) && (packet->modifier & MODIFIER_CAPS_LOCK))
+    {
+        // Both Shift and Caps Lock active
+        ascii_char = qwertz_normal[packet->scancode];
+        if (ascii_char >= 'a' && ascii_char <= 'z')
+        {
+            ascii_char -= 32; // Convert to uppercase
+        }
+        else if (ascii_char >= 'A' && ascii_char <= 'Z')
+        {
+            ascii_char += 32; // Convert to lowercase
+        }
+    }
+    else if (packet->modifier & MODIFIER_SHIFT)
+    {
+        ascii_char = qwertz_shift[packet->scancode];
+    }
+    else if (packet->modifier & MODIFIER_CAPS_LOCK)
+    {
+        ascii_char = qwertz_caps[packet->scancode];
+    }
+    else
+    {
+        ascii_char = qwertz_normal[packet->scancode];
+    }
+
+    // Additional handling for Ctrl, Alt can be added if necessary
+    if (packet->modifier & MODIFIER_CTRL)
+    {
+        // Implement Ctrl-specific behavior if needed
+    }
+    if (packet->modifier & MODIFIER_ALT)
+    {
+        // Implement Alt-specific behavior if needed
+    }
+
+    return ascii_char;
+}
+
+cvector(device_t *) devices = CVECTOR;
 cvector(driver_t *) driver = CVECTOR;
 
 KRES register_driver(driver_t *d)
@@ -40,56 +116,25 @@ bool driver_matches(const driver_t *d, const pci_device_t *dev)
     return true;
 }
 
-void driver_instatiate(const driver_t *d)
+KRES driver_instatiate(const driver_t *d, pci_device_t *pci_dev)
 {
     for (int k = 0; k < d->num_devices; k++)
     {
-        switch (d->device_type)
+        device_t *dev = d->init_device(k, pci_dev);
+        if (dev)
         {
-        case DEVICE_TYPE_CHARDEV:
-        {
-            chardev_t *cdev = d->create_cdev(k, NULL);
-            if (cdev)
-            {
-                LOG_INFO("Initialized Character Device '%s' from '%s' (module %s) by %s",
-                         d->device_name,
-                         d->driver_name,
-                         d->module,
-                         d->author);
-                cvector_push(chardevs, cdev);
-            }
-            break;
-        }
-        case DEVICE_TYPE_BLOCKDEV:
-        {
-            blockdev_t *bdev = d->create_bdev(k, NULL);
-            if (bdev)
-            {
-                LOG_INFO("Initialized Block Device '%s' from '%s' (module %s) by %s",
-                         d->device_name,
-                         d->driver_name,
-                         d->module,
-                         d->author);
-                cvector_push(blockdevs, bdev);
-            }
-            break;
-        }
-        case DEVICE_TYPE_INPUTDEV:
-        {
-            inputdev_t *idev = d->create_idev(k, NULL);
-            if (idev)
-            {
-                LOG_INFO("Initialized Input Device '%s' from '%s' (module %s) by %s",
-                         d->device_name,
-                         d->driver_name,
-                         d->module,
-                         d->author);
-                cvector_push(inputdevs, idev);
-            }
-            break;
-        }
+            cvector_push(devices, dev);
+            LOG_INFO("Initialized Device '%s' from '%s' (module %s) by %s (id 0x%x:0x%x)",
+                     d->device_name,
+                     d->driver_name,
+                     d->module,
+                     d->author,
+                     dev->pci_dev->vendor_id,
+                     dev->pci_dev->device_id);
         }
     }
+
+    return RES_SUCCESS;
 }
 
 KRES init_devices(void)
@@ -101,7 +146,7 @@ KRES init_devices(void)
             continue;
         }
 
-        driver_instatiate(driver[j]);
+        driver_instatiate(driver[j], NULL);
     }
 
     for (size_t i = 0; i < MAX_PCI_DEVICES; i++)
@@ -121,7 +166,7 @@ KRES init_devices(void)
 
             if (driver_matches(driver[j], pci_dev))
             {
-                driver_instatiate(driver[j]);
+                driver_instatiate(driver[j], pci_dev);
             }
         }
     }
@@ -129,32 +174,68 @@ KRES init_devices(void)
     return 0;
 }
 
-chardev_t *get_chardev(size_t index)
+device_t *get_device(uint16_t vendor, uint16_t device)
 {
-    if (index >= cvector_size(chardevs))
+    for (size_t i = 0; i < cvector_size(devices); i++)
     {
-        return NULL;
+        if (devices[i]->pci_dev->vendor_id == vendor && devices[i]->pci_dev->device_id == device)
+        {
+            return devices[i];
+        }
     }
 
-    return chardevs[index];
+    return NULL;
 }
 
-blockdev_t *get_blockdev(size_t index)
+device_t *get_device_by_index(size_t index)
 {
-    if (index >= cvector_size(blockdevs))
+    if (index >= cvector_size(devices))
     {
         return NULL;
     }
 
-    return blockdevs[index];
+    return devices[index];
 }
 
-inputdev_t *get_inputdev(size_t index)
+device_t *get_inputdev(void)
 {
-    if (index >= cvector_size(inputdevs))
+    for (size_t i = 0; i < cvector_size(devices); i++)
     {
-        return NULL;
+        if (devices[i]->type == DEVICE_INPUT)
+        {
+            return devices[i];
+        }
     }
 
-    return inputdevs[index];
+    return NULL;
+}
+
+int device_free(device_t *dev)
+{
+    return dev->ops->free(dev);
+}
+
+int device_poll(inputpacket_t *packet, device_t *dev)
+{
+    return dev->ops->poll(packet, dev);
+}
+
+int device_write(char c, chardev_color_t fg, chardev_color_t bg, device_t *dev)
+{
+    return dev->ops->write(c, fg, bg, dev);
+}
+
+int device_read_block(uint64_t lba, uint8_t *data, device_t *dev)
+{
+    return dev->ops->read_block(lba, data, dev);
+}
+
+int device_write_block(uint64_t lba, const uint8_t *data, device_t *dev)
+{
+    return dev->ops->write_block(lba, data, dev);
+}
+
+int device_eject(device_t *dev)
+{
+    return dev->ops->eject(dev);
 }

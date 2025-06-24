@@ -86,10 +86,9 @@ process_t *process_create(const char *path)
     proc->pid = current_pid++;
 
     // stdin
-    device_handle_t stdin_dev;
-    stdin_dev.type = DEVICE_TYPE_INPUTDEV;
-    stdin_dev.idev = get_inputdev(0);
-    if (!stdin_dev.idev)
+    device_t *stdin_dev = get_inputdev();
+
+    if (!stdin_dev)
     {
         process_free(proc);
         return NULL;
@@ -103,10 +102,9 @@ process_t *process_create(const char *path)
     }
 
     // stdout
-    device_handle_t stdout_dev;
-    stdout_dev.type = DEVICE_TYPE_CHARDEV;
-    stdout_dev.cdev = kprintf_get_cdev();
-    if (!stdout_dev.cdev)
+    device_t *stdout_dev = kprintf_get_cdev();
+
+    if (!stdout_dev)
     {
         process_free(proc);
         return NULL;

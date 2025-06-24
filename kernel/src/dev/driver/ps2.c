@@ -1,4 +1,3 @@
-#include <kernel/dev/inputdev.h>
 #include <kernel/dev/devm.h>
 #include <kernel/port.h>
 #include <kernel/kmm.h>
@@ -145,9 +144,9 @@ static void keyboard_irq(interrupt_frame_t *frame)
     // TODO: handle overflow
 }
 
-int ps2_poll(inputpacket_t *packet, inputdev_t *idev)
+int ps2_poll(inputpacket_t *packet, device_t *dev)
 {
-    if (!idev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
@@ -166,48 +165,24 @@ int ps2_poll(inputpacket_t *packet, inputdev_t *idev)
     return 0;
 }
 
-int ps2_free(inputdev_t *idev)
+int ps2_free(device_t *dev)
 {
-    if (!idev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
 
-    kfree(idev);
+    kfree(dev);
 
     return 0;
 }
 
-inputdev_t *ps2_create(size_t index, struct _pci_device *pci_dev)
-{
-    (void)index;
-    (void)pci_dev;
-
-    if (ps2_initialized)
-    {
-        return NULL;
-    }
-
-    inputdev_t *idev = kmalloc(sizeof(inputdev_t));
-    if (!idev)
-    {
-        return NULL;
-    }
-    ps2_initialized = true;
-
-    idev->poll = &ps2_poll;
-    idev->free = &ps2_free;
-    idev->references = 1;
-
-    register_interrupt_handler(33, &keyboard_irq);
-
-    return idev;
-}
+device_t *ps2_create(size_t index, struct _pci_device *pci_dev);
 
 driver_t ps2_driver = {
-    .device_type = DEVICE_TYPE_INPUTDEV,
+    .supported_type = DEVICE_INPUT,
     .num_devices = 1,
-    .create_idev = &ps2_create,
+    .init_device = &ps2_create,
 
     .class_code = 0xFF,
     .subclass_code = 0xFF,
@@ -218,3 +193,35 @@ driver_t ps2_driver = {
     .module = "none",
     .author = "Nico Grundei"
 };
+
+device_ops_t ps2_ops = {
+    .free = &ps2_free,
+    .poll = &ps2_poll,
+};
+
+device_t *ps2_create(size_t index, struct _pci_device *pci_dev)
+{
+    (void)index;
+    (void)pci_dev;
+
+    if (ps2_initialized)
+    {
+        return NULL;
+    }
+
+    device_t *dev = kmalloc(sizeof(device_t));
+    if (!dev)
+    {
+        return NULL;
+    }
+    ps2_initialized = true;
+
+    dev->type = DEVICE_INPUT;
+    dev->driver = &ps2_driver;
+    dev->ops = &ps2_ops;
+    dev->pci_dev = pci_dev;
+
+    register_interrupt_handler(33, &keyboard_irq);
+
+    return dev;
+}

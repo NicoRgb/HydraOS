@@ -40,7 +40,7 @@ static int add_virtual_blockdev(virtual_blockdev_t *vbdev)
     return 0;
 }
 
-int scan_partition(blockdev_t *bdev)
+int scan_partition(device_t *bdev)
 {
     partition_table_t *pt = NULL;
     for (size_t i = 0; i < partition_tables_size; i++)
@@ -62,7 +62,7 @@ int scan_partition(blockdev_t *bdev)
         }
 
         vbdev->pt = NULL;
-        vbdev->bdev = blockdev_new_ref(bdev);
+        vbdev->bdev = bdev;
         vbdev->lba_offset = 0;
         vbdev->type = 0;
         vbdev->index = 0;
@@ -116,7 +116,7 @@ int scan_partition(blockdev_t *bdev)
     return 0;
 }
 
-int free_virtual_blockdevs(blockdev_t *bdev)
+int free_virtual_blockdevs(device_t *bdev)
 {
     if (!bdev)
     {
@@ -134,19 +134,13 @@ int free_virtual_blockdevs(blockdev_t *bdev)
         vbdev->prev->next = vbdev->next;
         vbdev->next->prev = vbdev->prev;
 
-        int status = blockdev_free_ref(vbdev->bdev);
-        if (status < 0)
-        {
-            return status;
-        }
-
         kfree(vbdev);
     }
 
     return 0;
 }
 
-virtual_blockdev_t *get_virtual_blockdev(blockdev_t *bdev, uint8_t index)
+virtual_blockdev_t *get_virtual_blockdev(device_t *bdev, uint8_t index)
 {
     virtual_blockdev_t *vbdev = NULL;
     for (vbdev = vbdevs_head; vbdev != NULL; vbdev = vbdev->next)

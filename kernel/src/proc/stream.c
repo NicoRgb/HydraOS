@@ -36,7 +36,7 @@ int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_
     return 0;
 }
 
-int stream_create_driver(stream_t *stream, uint8_t flags, device_handle_t device)
+int stream_create_driver(stream_t *stream, uint8_t flags, device_t *device)
 {
     stream->type = STREAM_TYPE_DRIVER;
     stream->flags = flags;
@@ -96,12 +96,12 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
 
         break;
     case STREAM_TYPE_DRIVER:
-        switch (stream->device.type)
+        switch (stream->device->type)
         {
-        case DEVICE_TYPE_INPUTDEV:
+        case DEVICE_INPUT:
             inputpacket_t packet;
             size_t i = 0;
-            while (inputdev_poll(&packet, stream->device.idev) == 0 && packet.type != IPACKET_NULL && i < size)
+            while (device_poll(&packet, stream->device) == 0 && packet.type != IPACKET_NULL && i < size)
             {
                 if (packet.type != IPACKET_KEYDOWN && packet.type != IPACKET_KEYREPEAT)
                 {
@@ -112,10 +112,10 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
             }
 
             break;
-        case DEVICE_TYPE_BLOCKDEV:
+        case DEVICE_BLOCK:
             // TODO: implement
             break;
-        case DEVICE_TYPE_CHARDEV:
+        case DEVICE_CHAR:
             return -RES_EUNKNOWN;
         default:
             return -RES_INVARG;
@@ -155,12 +155,12 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
 
         break;
     case STREAM_TYPE_DRIVER:
-        switch (stream->device.type)
+        switch (stream->device->type)
         {
-        case DEVICE_TYPE_CHARDEV:
+        case DEVICE_CHAR:
             for (size_t i = 0; i < size; i++)
             {
-                int res = chardev_write((char)data[i], CHARDEV_COLOR_WHITE, CHARDEV_COLOR_BLACK, stream->device.cdev);
+                int res = device_write((char)data[i], CHARDEV_COLOR_WHITE, CHARDEV_COLOR_BLACK, stream->device);
                 if (res < 0)
                 {
                     return res;
@@ -170,11 +170,11 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
             }
 
             break;
-        case DEVICE_TYPE_BLOCKDEV:
+        case DEVICE_BLOCK:
             // TODO: implement
             break;
 
-        case DEVICE_TYPE_INPUTDEV:
+        case DEVICE_INPUT:
             return -RES_EUNKNOWN;
         default:
             return -RES_INVARG;

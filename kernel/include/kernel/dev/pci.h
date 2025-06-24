@@ -1,8 +1,8 @@
 #ifndef _KERNEL_PCI_H
 #define _KERNEL_PCI_H
 
-#include <kernel/dev/chardev.h>
 #include <kernel/status.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -11,8 +11,6 @@
 #define MAX_DEVICE 32
 #define MAX_FUNCTION 8
 #define MAX_PCI_DEVICES (MAX_BUS * MAX_DEVICE * MAX_FUNCTION)
-
-#define PCI_SUBCLASS_DISPLAY_CONTROLLER_OTHER 0x80
 
 enum bar_type
 {

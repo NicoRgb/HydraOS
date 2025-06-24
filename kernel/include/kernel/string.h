@@ -14,7 +14,7 @@ void *memset(void *dest, register int val, register size_t len);
 void memcpy(void *dest, const void *src, size_t len);
 int memcmp(const char *cs_in, const char *ct_in, size_t n);
 
-int atoui(char *s);
+int atoi(char *s);
 
 int isdigit(char c);
 int isspace(char c);

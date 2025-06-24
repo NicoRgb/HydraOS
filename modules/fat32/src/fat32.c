@@ -22,7 +22,7 @@ static void read_fat_device(virtual_blockdev_t *device, size_t lba, size_t size,
             while (1);
         }
 
-        if (blockdev_read_block(current_lba, buf, device->bdev) < 0)
+        if (device_read_block(current_lba, buf, device->bdev) < 0)
         {
             while (1);
         }
@@ -45,7 +45,7 @@ static void write_fat_device(virtual_blockdev_t *device, size_t lba, size_t size
             while (1);
         }
 
-        if (blockdev_write_block(current_lba, buf, device->bdev) < 0)
+        if (device_write_block(current_lba, buf, device->bdev) < 0)
         {
             while (1);
         }

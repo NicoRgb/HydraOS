@@ -25,12 +25,19 @@ static int process_boot_parameter(const char *key, char *value)
 {
     if (strcmp(key, "klog") == 0)
     {
-        if (strlen(value) < 4)
+        char *colon_pos = strchr(value, ':');
+        if (colon_pos == NULL) 
         {
             return -1;
         }
-        boot_info.tty = atoui(value + 3);
+
+        *colon_pos = '\0';
+        boot_info.tty_vendor = (uint16_t)atoi(value);
+
+        char *second_value_str = colon_pos + 1;
+        boot_info.tty_device = (uint16_t)atoi(second_value_str);
     }
+    
     return 0;
 }
 
@@ -296,21 +303,27 @@ void kmain()
         PANIC("failed to initialize devices");
     }
 
-    if (IS_ERROR(kprintf_init(get_chardev(boot_info.tty))))
+    if (IS_ERROR(kprintf_init(get_device(boot_info.tty_vendor, boot_info.tty_device))))
     {
         PANIC("failed to initialize kprintf");
     }
 
     uint64_t i = 0;
-    blockdev_t *bdev = NULL;
+    device_t *bdev = NULL;
     do
     {
         i++;
-        bdev = get_blockdev(i - 1);
+        bdev = get_device_by_index(i - 1);
         if (!bdev)
         {
             break;
         }
+        
+        if (bdev->type != DEVICE_BLOCK)
+        {
+            continue;
+        }
+
         LOG_INFO("found disc %s with %ld sectors, id %ld", bdev->model, bdev->num_blocks, i - 1);
 
         if (scan_partition(bdev) < 0)

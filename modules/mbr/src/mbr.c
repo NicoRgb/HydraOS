@@ -28,7 +28,7 @@ typedef struct
     uint16_t magic_number;
 } __attribute__((packed)) master_boot_record_t;
 
-void *mbr_init(blockdev_t *bdev)
+void *mbr_init(device_t *bdev)
 {
     if (!bdev)
     {
@@ -41,7 +41,7 @@ void *mbr_init(blockdev_t *bdev)
         return NULL;
     }
 
-    if (blockdev_read_block(0, (uint8_t *)mbr, bdev) < 0)
+    if (device_read_block(0, (uint8_t *)mbr, bdev) < 0)
     {
         return NULL;
     }
@@ -49,7 +49,7 @@ void *mbr_init(blockdev_t *bdev)
     return (void *)mbr;
 }
 
-int mbr_free(blockdev_t *bdev, void *mbr_data)
+int mbr_free(device_t *bdev, void *mbr_data)
 {
     if (!bdev || !mbr_data)
     {
@@ -61,10 +61,10 @@ int mbr_free(blockdev_t *bdev, void *mbr_data)
     return 0;
 }
 
-int mbr_test(blockdev_t *bdev)
+int mbr_test(device_t *bdev)
 {
     master_boot_record_t mbr;
-    if (blockdev_read_block(0, (uint8_t *)&mbr, bdev) < 0)
+    if (device_read_block(0, (uint8_t *)&mbr, bdev) < 0)
     {
         return -RES_ETEST;
     }

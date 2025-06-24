@@ -36,14 +36,14 @@ typedef struct
 
         struct
         {
-            device_handle_t device;
+            device_t *device;
         };
     };
 } stream_t;
 
 int stream_create_bidirectional(stream_t *stream, uint8_t flags, size_t size);
 int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_t open_action);
-int stream_create_driver(stream_t *stream, uint8_t flags, device_handle_t device);
+int stream_create_driver(stream_t *stream, uint8_t flags, device_t *device);
 
 void stream_free(stream_t *stream);
 

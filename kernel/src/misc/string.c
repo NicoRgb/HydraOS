@@ -93,7 +93,7 @@ int memcmp(const char *cs_in, const char *ct_in, size_t n)
     return 0;
 }
 
-int atoui(char *s)
+int atoi(char *s)
 {
     int acum = 0;
     while ((*s >= '0') && (*s <= '9'))

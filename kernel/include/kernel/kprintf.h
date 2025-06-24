@@ -6,12 +6,12 @@
 #include <stddef.h>
 
 #include <kernel/status.h>
-#include <kernel/dev/chardev.h>
+#include <kernel/dev/devm.h>
 
-int kprintf_init(chardev_t *cdev);
+int kprintf_init(device_t *cdev);
 void kprintf_free(void);
 
-chardev_t *kprintf_get_cdev(void);
+device_t *kprintf_get_cdev(void);
 
 int kprintf(const char *format, ...);
 int vkprintf(const char *format, va_list va);

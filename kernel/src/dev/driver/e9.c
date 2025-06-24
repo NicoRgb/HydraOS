@@ -1,4 +1,3 @@
-#include <kernel/dev/chardev.h>
 #include <kernel/dev/devm.h>
 #include <kernel/port.h>
 #include <kernel/kmm.h>
@@ -6,9 +5,9 @@
 
 static bool e9_initialized = false;
 
-int e9_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
+int e9_write(char c, chardev_color_t fg, chardev_color_t bg, device_t *dev)
 {
-    if (!cdev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
@@ -21,46 +20,24 @@ int e9_write(char c, chardev_color_t fg, chardev_color_t bg, chardev_t *cdev)
     return 0;
 }
 
-int e9_free(chardev_t *cdev)
+int e9_free(device_t *dev)
 {
-    if (!cdev)
+    if (!dev)
     {
         return -RES_INVARG;
     }
 
-    kfree(cdev);
+    kfree(dev);
 
     return 0;
 }
 
-chardev_t *e9_create(size_t index, struct _pci_device *pci_dev)
-{
-    (void)index;
-    (void)pci_dev;
-
-    if (e9_initialized)
-    {
-        return NULL;
-    }
-
-    chardev_t *cdev = kmalloc(sizeof(chardev_t));
-    if (!cdev)
-    {
-        return NULL;
-    }
-    e9_initialized = true;
-
-    cdev->write = &e9_write;
-    cdev->free = &e9_free;
-    cdev->references = 1;
-
-    return cdev;
-}
+device_t *e9_create(size_t index, struct _pci_device *pci_dev);
 
 driver_t e9_driver = {
-    .device_type = DEVICE_TYPE_CHARDEV,
+    .supported_type = DEVICE_CHAR,
     .num_devices = 1,
-    .create_cdev = &e9_create,
+    .init_device = &e9_create,
 
     .class_code = 0xFF,
     .subclass_code = 0xFF,
@@ -71,3 +48,34 @@ driver_t e9_driver = {
     .module = "none",
     .author = "Nico Grundei"
 };
+
+device_ops_t e9_ops = {
+    .free = &e9_free,
+    .write = &e9_write,
+};
+
+device_t *e9_create(size_t index, struct _pci_device *pci_dev)
+{
+    (void)index;
+    (void)pci_dev;
+
+    if (e9_initialized)
+    {
+        return NULL;
+    }
+
+    device_t *dev = kmalloc(sizeof(device_t));
+    if (!dev)
+    {
+        return NULL;
+    }
+    e9_initialized = true;
+
+    dev->type = DEVICE_CHAR;
+    dev->driver_data = NULL;
+    dev->driver = &e9_driver;
+    dev->ops = &e9_ops;
+    dev->pci_dev = pci_dev;
+
+    return dev;
+}

@@ -1,5 +1,4 @@
 #include <ide.h>
-#include <kernel/dev/blockdev.h>
 #include <kernel/port.h>
 #include <kernel/kmm.h>
 #include <kernel/dev/pci.h>
@@ -576,15 +575,15 @@ void ide_irq(interrupt_frame_t *frame)
     ide_irq_invoked = 1;
 }
 
-int ide_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev)
+int ide_read_block(uint64_t lba, uint8_t *data, device_t *bdev)
 {
     if (!bdev || !bdev->available)
     {
         return -RES_INVARG;
     }
 
-    ide_device_t *dev = &ide_devices[bdev->_data];
-    if (bdev->_data > 3 || dev->reserved == 0)
+    ide_device_t *dev = &ide_devices[(uint64_t)bdev->driver_data];
+    if ((uint64_t)bdev->driver_data > 3 || dev->reserved == 0)
     {
         return -RES_INVARG;
     }
@@ -596,26 +595,26 @@ int ide_read_block(uint64_t lba, uint8_t *data, blockdev_t *bdev)
     uint8_t err = 0;
     if (dev->type == IDE_ATA)
     {
-        err = ide_ata_access(ATA_READ, bdev->_data, lba, 1, NULL, data);
+        err = ide_ata_access(ATA_READ, (uint64_t)bdev->driver_data, lba, 1, NULL, data);
     }
     else if (dev->type == IDE_ATAPI)
     {
-        err = ide_atapi_read(bdev->_data, lba, 1, data);
+        err = ide_atapi_read((uint64_t)bdev->driver_data, lba, 1, data);
     }
 
     return -err; // TODO: use own error codes
 }
 
-int ide_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
+int ide_write_block(uint64_t lba, const uint8_t *data, device_t *bdev)
 {
     if (!bdev || !bdev->available)
     {
         return -RES_INVARG;
     }
 
-    ide_device_t *dev = &ide_devices[bdev->_data];
+    ide_device_t *dev = &ide_devices[(uint64_t)bdev->driver_data];
 
-    if (bdev->_data > 3 || dev->reserved == 0)
+    if ((uint64_t)bdev->driver_data > 3 || dev->reserved == 0)
     {
         return -RES_INVARG;
     }
@@ -628,7 +627,7 @@ int ide_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
     uint8_t err = 0;
     if (dev->type == IDE_ATA)
     {
-        err = ide_ata_access(ATA_WRITE, bdev->_data, lba, 1, data, NULL);
+        err = ide_ata_access(ATA_WRITE, (uint64_t)bdev->driver_data, lba, 1, data, NULL);
     }
     else if (dev->type == IDE_ATAPI)
     {
@@ -638,13 +637,13 @@ int ide_write_block(uint64_t lba, const uint8_t *data, blockdev_t *bdev)
     return -err; // TODO: use own error codes
 }
 
-int ide_eject(blockdev_t *bdev)
+int ide_eject(device_t *bdev)
 {
     if (!bdev)
     {
         return -RES_INVARG;
     }
-    if (ide_devices[bdev->_data].type != IDE_ATAPI)
+    if (ide_devices[(uint64_t)bdev->driver_data].type != IDE_ATAPI)
     {
         return -RES_EUNKNOWN;
     }
@@ -654,7 +653,7 @@ int ide_eject(blockdev_t *bdev)
     return 0;
 }
 
-int ide_free(blockdev_t *bdev)
+int ide_free(device_t *bdev)
 {
     if (!bdev)
     {
@@ -672,7 +671,15 @@ int ide_free(blockdev_t *bdev)
 
 static bool ide_initialized = false;
 
-blockdev_t *ide_create(size_t index, pci_device_t *pci_dev)
+extern driver_t ide_driver;
+device_ops_t ide_ops = {
+    .free = &ide_free,
+    .read_block = &ide_read_block,
+    .write_block = &ide_write_block,
+    .eject = &ide_eject,
+};
+
+device_t *ide_create(size_t index, pci_device_t *pci_dev)
 {
     if (index >= 4)
     {
@@ -718,27 +725,26 @@ blockdev_t *ide_create(size_t index, pci_device_t *pci_dev)
         return NULL;
     }
 
-    blockdev_t *bdev = kmalloc(sizeof(blockdev_t));
+    device_t *bdev = kmalloc(sizeof(device_t));
     if (!bdev)
     {
         return NULL;
     }
 
-    bdev->free = &ide_free;
-    bdev->read_block = &ide_read_block;
-    bdev->write_block = &ide_write_block;
-    bdev->eject = &ide_eject;
+    bdev->type = DEVICE_BLOCK;
+    bdev->driver = &ide_driver;
+    bdev->ops = &ide_ops;
+    bdev->pci_dev = pci_dev;
     bdev->block_size = dev->type == IDE_ATA ? 512 : 2048;
     bdev->num_blocks = dev->size;
-    bdev->_data = index;
+    bdev->driver_data = (void *)index;
     strncpy(bdev->model, (char *)dev->model, BLOCKDEV_MODEL_MAX_LEN);
-    bdev->type = BLOCKDEV_TYPE_HARD_DRIVE;
+    bdev->blockdev_type = BLOCKDEV_TYPE_HARD_DRIVE;
     if (dev->type == IDE_ATAPI)
     {
-        bdev->type = BLOCKDEV_TYPE_REMOVABLE;
+        bdev->blockdev_type = BLOCKDEV_TYPE_REMOVABLE;
     }
     bdev->available = true;
-    bdev->references = 1;
 
     return bdev;
 }

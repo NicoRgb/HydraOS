@@ -24,7 +24,8 @@ typedef struct
 
 typedef struct
 {
-    uint8_t tty;
+    uint16_t tty_vendor;
+    uint16_t tty_device;
     uint64_t total_memory;
     uint64_t num_mmap_entries;
     memory_map_entry_t memory_map[MAX_MMAP_ENTRIES];

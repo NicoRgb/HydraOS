@@ -7,9 +7,9 @@
 #define PCI_SUBCLASS_IDE_CONTROLLER 0x01
 
 driver_t ide_driver = {
-    .device_type = DEVICE_TYPE_BLOCKDEV,
+    .supported_type = DEVICE_BLOCK,
     .num_devices = 4,
-    .create_bdev = &ide_create,
+    .init_device = &ide_create,
 
     .class_code = PCI_CLASS_MASS_STORAGE_CONTROLLER,
     .subclass_code = PCI_SUBCLASS_IDE_CONTROLLER,
