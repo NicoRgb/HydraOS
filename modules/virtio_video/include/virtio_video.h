@@ -1,5 +1,5 @@
-#ifndef _FAT32_FAT32_H
-#define _FAT32_FAT32_H
+#ifndef _VIRTIO_VIDEO_VIRTIO_VIDEO_H
+#define _VIRTIO_VIDEO_VIRTIO_VIDEO_H
 
 #include <kernel/dev/devm.h>
 #include <kernel/dev/pci.h>

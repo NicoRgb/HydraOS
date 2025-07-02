@@ -102,6 +102,9 @@ typedef struct device_ops
     int (*write_block)(uint64_t lba, const uint8_t *data, device_t *dev);
     int (*eject)(device_t *dev);
 
+    // rng
+    int (*randomize_buffer)(uint8_t *data, size_t size, device_t *dev);
+
     // video
     int (*get_display_rect)(video_rect_t *rect, device_t *dev);
 } device_ops_t;

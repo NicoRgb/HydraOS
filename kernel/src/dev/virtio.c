@@ -191,6 +191,48 @@ KRES virtio_start(virtio_device_t *dev)
     return RES_SUCCESS;
 }
 
+KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len)
+{
+    if (len == 0)
+    {
+        return -RES_INVARG;
+    }
+
+    dev->common->queue_select = vq->queue_index;
+    dev->common->queue_enable = 1;
+
+    uint16_t size = vq->queue_size;
+    uint16_t idx = vq->next_desc_idx;
+
+    memset(&vq->desc[idx], 0, sizeof(struct virtq_desc));
+
+    vq->desc[idx].addr = buf;
+    vq->desc[idx].len = len;
+    vq->desc[idx].flags = VIRTQ_DESC_F_NEXT;
+    vq->desc[idx].next = (idx + 1) % size;
+
+    vq->avail->ring[vq->avail->idx % size] = idx;
+    vq->avail->idx++;
+
+    vq->last_used_idx = vq->used->idx;
+    vq->next_desc_idx = (idx + 1) % size;
+
+    __sync_synchronize();
+
+    *(volatile uint16_t *)(uintptr_t)(dev->notify + dev->notify_off_multiplier * vq->queue_index) = vq->queue_index;
+
+    size_t timeout = 0xFFFFFFFFFFFFFFFF;
+    while (vq->last_used_idx == vq->used->idx && timeout-- > 0);
+
+    if (timeout <= 0)
+    {
+        LOG_ERROR("virtio_send timeout");
+        return -RES_TIMEOUT;
+    }
+
+    return RES_SUCCESS;
+}
+
 KRES virtio_send(virtio_device_t *dev, virtqueue_t *vq, uint64_t cmd, uint32_t cmd_len, uint64_t resp, uint32_t resp_len)
 {
     if (cmd_len == 0 || resp_len == 0)

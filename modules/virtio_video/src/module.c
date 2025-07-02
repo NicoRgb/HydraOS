@@ -3,9 +3,6 @@
 #include <kernel/log.h>
 #include <kernel/dev/devm.h>
 
-#define PCI_CLASS_DISPLAY_CONTROLLER 0x03
-#define PCI_SUBCLASS_DISPLAY_CONTROLLER_OTHER 0x80
-
 driver_t virtio_video_driver = {
     .supported_type = DEVICE_VIDEO,
     .num_devices = 1,

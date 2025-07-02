@@ -126,6 +126,7 @@ KRES virtio_start(virtio_device_t *dev);
 virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index);
 
 KRES virtqueue_send_buffer(virtio_device_t *dev, virtqueue_t *vq, void *phys_buf, size_t len, bool write);
+KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len);
 KRES virtio_send(virtio_device_t *dev, virtqueue_t *vq, uint64_t cmd, uint32_t cmd_len, uint64_t resp, uint32_t resp_len);
 
 #endif
