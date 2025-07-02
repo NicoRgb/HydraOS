@@ -14,6 +14,8 @@ driver_t ide_driver = {
     .class_code = PCI_CLASS_MASS_STORAGE_CONTROLLER,
     .subclass_code = PCI_SUBCLASS_IDE_CONTROLLER,
     .prog_if = 0xFF,
+    .vendor_id = 0xFFFF,
+    .device_id= 0xFFFF,
 
     .driver_name = "IDE Controller",
     .device_name = "ATA, SATA or ATAPI Disk",

@@ -187,6 +187,8 @@ driver_t ps2_driver = {
     .class_code = 0xFF,
     .subclass_code = 0xFF,
     .prog_if = 0xFF,
+    .vendor_id = 0xFFFF,
+    .device_id= 0xFFFF,
 
     .driver_name = "PS2 Controller",
     .device_name = "Keyboard",

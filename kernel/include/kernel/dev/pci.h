@@ -46,5 +46,6 @@ int pci_init(void);
 void pci_free(void);
 
 pci_device_t *pci_get_device(uint64_t id);
+void pci_enable_device(pci_device_t *dev);
 
 #endif

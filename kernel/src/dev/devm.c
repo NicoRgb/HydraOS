@@ -100,18 +100,17 @@ KRES register_driver(driver_t *d)
 
 bool driver_matches(const driver_t *d, const pci_device_t *dev)
 {
-    if (d->class_code != dev->class_code)
-    {
+    if (d->class_code != 0xFF && d->class_code != dev->class_code)
         return false;
-    }
     if (d->subclass_code != 0xFF && d->subclass_code != dev->subclass_code)
-    {
         return false;
-    }
     if (d->prog_if != 0xFF && d->prog_if != dev->prog_if)
-    {
         return false;
-    }
+
+    if (d->vendor_id != 0xFFFF && d->vendor_id != dev->vendor_id)
+        return false;
+    if (d->device_id != 0xFFFF && d->device_id != dev->device_id)
+        return false;
 
     return true;
 }
@@ -141,7 +140,7 @@ KRES init_devices(void)
 {
     for (size_t j = 0; j < cvector_size(driver); j++)
     {
-        if (driver[j]->class_code != 0xFF) // uses pci
+        if (driver[j]->class_code != 0xFF || driver[j]->vendor_id != 0xFFFF) // uses pci
         {
             continue;
         }
@@ -159,7 +158,7 @@ KRES init_devices(void)
 
         for (size_t j = 0; j < cvector_size(driver); j++)
         {
-            if (driver[j]->class_code == 0xFF)
+            if (driver[j]->class_code == 0xFF && driver[j]->vendor_id == 0xFFFF)
             {
                 continue;
             }

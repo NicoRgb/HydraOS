@@ -7,13 +7,15 @@
 #define PCI_SUBCLASS_DISPLAY_CONTROLLER_OTHER 0x80
 
 driver_t virtio_video_driver = {
-    .supported_type = DEVICE_CHAR,
+    .supported_type = DEVICE_VIDEO,
     .num_devices = 1,
     .init_device = &virtio_video_create,
 
-    .class_code = PCI_CLASS_DISPLAY_CONTROLLER,
-    .subclass_code = PCI_SUBCLASS_DISPLAY_CONTROLLER_OTHER,
+    .class_code = 0xFF,
+    .subclass_code = 0xFF,
     .prog_if = 0xFF,
+    .vendor_id = 0x1AF4,
+    .device_id = 0x1050,
 
     .driver_name = "Virtio based Video Controller",
     .device_name = "Virtual GPU",

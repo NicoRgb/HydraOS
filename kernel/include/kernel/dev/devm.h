@@ -45,6 +45,14 @@ typedef struct
     int deltaY;
 } inputpacket_t;
 
+typedef struct
+{
+    uint32_t x;
+    uint32_t y;
+    uint32_t width;
+    uint32_t height;
+} video_rect_t;
+
 char inputdev_packet_to_ascii(inputpacket_t *packet);
 
 struct _pci_device;
@@ -54,7 +62,7 @@ typedef enum
     DEVICE_BLOCK,
     DEVICE_CHAR,
     DEVICE_INPUT,
-    DEVICE_GPU,
+    DEVICE_VIDEO,
     DEVICE_RNG,
     DEVICE_NET,
 } device_type_t;
@@ -93,6 +101,9 @@ typedef struct device_ops
     int (*read_block)(uint64_t lba, uint8_t *data, device_t *dev);
     int (*write_block)(uint64_t lba, const uint8_t *data, device_t *dev);
     int (*eject)(device_t *dev);
+
+    // video
+    int (*get_display_rect)(video_rect_t *rect, device_t *dev);
 } device_ops_t;
 
 typedef struct driver
@@ -101,6 +112,9 @@ typedef struct driver
     uint8_t class_code;
     uint8_t subclass_code;
     uint8_t prog_if;
+
+    uint16_t vendor_id;
+    uint16_t device_id;
 
     // logging/debugging
     const char *driver_name;

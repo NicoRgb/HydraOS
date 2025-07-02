@@ -10,6 +10,7 @@
 int pmm_init(memory_map_entry_t *memory_map, uint64_t num_mmap_entries, uint64_t total_memory);
 void pmm_reserve(uint64_t *page);
 void *pmm_alloc(void);
+void *pmm_alloc_contiguous(size_t num_pages);
 void pmm_free(uint64_t *page);
 
 uint64_t get_max_addr(void);

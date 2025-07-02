@@ -23,6 +23,22 @@ static void pci_write(uint8_t bus, uint8_t device, uint8_t function, uint8_t off
     port_dword_out(PCI_DATA_PORT, value);
 }
 
+uint16_t pci_read_word(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
+{
+    uint32_t val = pci_read(bus, device, function, offset & 0xFC);
+    uint8_t shift = (offset & 2) * 8;
+    return (val >> shift) & 0xFFFF;
+}
+
+void pci_write_word(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset, uint16_t value)
+{
+    uint32_t old = pci_read(bus, device, function, offset & 0xFC);
+    uint8_t shift = (offset & 2) * 8;
+    uint32_t mask = 0xFFFF << shift;
+    uint32_t new_val = (old & ~mask) | ((uint32_t)value << shift);
+    pci_write(bus, device, function, offset & 0xFC, new_val);
+}
+
 static bool pci_device_exists(uint8_t bus, uint8_t device, uint8_t function)
 {
     uint32_t data = pci_read(bus, device, function, 0x00);
@@ -175,4 +191,11 @@ pci_device_t *pci_get_device(uint64_t id)
     }
 
     return &pci_devices[id];
+}
+
+void pci_enable_device(pci_device_t *dev)
+{
+    uint16_t cmd = pci_read_word(dev->bus, dev->device, dev->function, 0x04);
+    cmd |= (1 << 1) | (1 << 2); // Enable Memory Space and Bus Master
+    pci_write_word(dev->bus, dev->device, dev->function, 0x04, cmd);
 }

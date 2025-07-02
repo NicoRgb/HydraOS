@@ -12,6 +12,7 @@
 #define RES_CORRUPT 4
 #define RES_NOMEM 5
 #define RES_UNAVAILABLE 6
+#define RES_TIMEOUT 7
 
 #define RES_EUNKNOWN 10 // TODO: remove
 #define RES_ETEST 11

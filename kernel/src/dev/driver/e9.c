@@ -42,6 +42,8 @@ driver_t e9_driver = {
     .class_code = 0xFF,
     .subclass_code = 0xFF,
     .prog_if = 0xFF,
+    .vendor_id = 0xFFFF,
+    .device_id= 0xFFFF,
 
     .driver_name = "0xE9 Port Hack",
     .device_name = "Serial Output",

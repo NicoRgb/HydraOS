@@ -116,6 +116,8 @@ driver_t vga_driver = {
     .class_code = PCI_CLASS_DISPLAY_CONTROLLER,
     .subclass_code = PCI_SUBCLASS_VGA_COMP_CONTROLLER,
     .prog_if = 0xFF,
+    .vendor_id = 0xFFFF,
+    .device_id= 0xFFFF,
 
     .driver_name = "VGA Compatability Mode Output",
     .device_name = "Virtual Terminal",

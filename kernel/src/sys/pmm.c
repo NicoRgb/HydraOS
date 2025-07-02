@@ -107,6 +107,45 @@ void *pmm_alloc(void)
     return NULL;
 }
 
+void *pmm_alloc_contiguous(size_t num_pages)
+{
+    if (num_pages == 0 || num_pages > page_allocator.num_pages)
+    {
+        return NULL;
+    }
+
+    uint64_t max_start = page_allocator.num_pages - num_pages;
+
+    for (uint64_t i = 0; i <= max_start; i++)
+    {
+        bool found = true;
+
+        for (uint64_t j = 0; j < num_pages; j++)
+        {
+            if (bit_get(page_allocator.bitmap, i + j))
+            {
+                found = false;
+                i += j;
+                break;
+            }
+        }
+
+        if (found)
+        {
+            for (uint64_t j = 0; j < num_pages; j++)
+            {
+                bit_set(page_allocator.bitmap, i + j);
+            }
+
+            page_allocator.last_index = i + num_pages - 1;
+
+            return (void *)(i * PAGE_SIZE);
+        }
+    }
+
+    return NULL;
+}
+
 void pmm_free(uint64_t *page)
 {
     uint64_t index = (uint64_t)page / PAGE_SIZE;
