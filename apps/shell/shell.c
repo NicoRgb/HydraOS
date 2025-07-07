@@ -67,7 +67,7 @@ char **split_line(char *line)
         if (pos >= bufsize)
         {
             bufsize += TOKEN_BUFFER_SIZE;
-            tokens = realloc(tokens, bufsize * sizeof(char *));
+            tokens = realloc(tokens, (bufsize - TOKEN_BUFFER_SIZE) * sizeof(char *), bufsize * sizeof(char *));
             if (tokens == NULL)
             {
                 fputs("allocation failure", stdout);
@@ -90,6 +90,8 @@ int shell_launch(char **args)
         fputs("failed to fork process\n", stdout);
         syscall_exit(1);
     }
+
+    printf("PATH='%s'\n", getenv("PATH"));
     
     if (pid == 0)
     {

@@ -82,6 +82,11 @@ char inputdev_packet_to_ascii(inputpacket_t *packet)
     return ascii_char;
 }
 
+size_t get_framebuffer_size(video_rect_t *rect)
+{
+    return rect->width * rect->height * 4;
+}
+
 cvector(device_t *) devices = CVECTOR;
 cvector(driver_t *) driver = CVECTOR;
 
@@ -196,13 +201,18 @@ device_t *get_device_by_index(size_t index)
     return devices[index];
 }
 
-device_t *get_inputdev(void)
+device_t *get_device_by_type(device_type_t type, size_t index)
 {
+    size_t j = index;
     for (size_t i = 0; i < cvector_size(devices); i++)
     {
-        if (devices[i]->type == DEVICE_INPUT)
+        if (devices[i]->type == type)
         {
-            return devices[i];
+            if (j <= 0)
+            {
+                return devices[i];
+            }
+            j--;
         }
     }
 
@@ -237,4 +247,24 @@ int device_write_block(uint64_t lba, const uint8_t *data, device_t *dev)
 int device_eject(device_t *dev)
 {
     return dev->ops->eject(dev);
+}
+
+int device_randomize_buffer(uint8_t *data, size_t size, device_t *dev)
+{
+    return dev->ops->randomize_buffer(data, size, dev);
+}
+
+int device_get_display_rect(video_rect_t *rect, int display, device_t *dev)
+{
+    return dev->ops->get_display_rect(rect, display, dev);
+}
+
+uint32_t *device_create_framebuffer(video_rect_t *rect, int display, device_t *dev)
+{
+    return dev->ops->create_framebuffer(rect, display, dev);
+}
+
+int device_update_display(video_rect_t *rect, void *framebuffer, device_t *dev)
+{
+    return dev->ops->update_display(rect, framebuffer, dev);
 }

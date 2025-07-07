@@ -4,9 +4,6 @@ section .text
 extern main
 extern initialize_standard_library
 
-extern _argc
-extern _argv
-
 global _start
 _start:
     mov rbp, 0

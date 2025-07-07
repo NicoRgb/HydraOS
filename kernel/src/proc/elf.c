@@ -146,73 +146,78 @@ void elf_free(elf_file_t *file)
 
 static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint64_t *data_pages_index, process_t *original)
 {
-    if (!ph)
-    {
-        return -RES_INVARG;
-    }
-
-    if (ph->p_type != PT_LOAD)
+    if (!ph || ph->p_type != PT_LOAD)
     {
         return 0;
     }
 
-    int status = vfs_seek(elf_file->node, ph->p_offset, SEEK_TYPE_SET);
-    if (status < 0)
-    {
-        return status;
-    }
+    uint64_t seg_vaddr = ph->p_vaddr;
+    uint64_t seg_offset = ph->p_offset;
 
-    for (size_t i = 0; i < (ph->p_memsz + (PAGE_SIZE - 1)) / PAGE_SIZE; i++)
+    uint64_t aligned_vaddr = seg_vaddr & ~(PAGE_SIZE - 1);
+    uint64_t offset_in_page = seg_vaddr - aligned_vaddr;
+
+    uint64_t file_end = seg_offset + ph->p_filesz;
+    uint64_t mem_end = seg_vaddr + ph->p_memsz;
+
+    uint64_t total_size = (uint64_t)page_align_address_higer((void *)(mem_end - aligned_vaddr));
+
+    for (size_t i = 0; i < total_size / PAGE_SIZE; i++)
     {
-        proc->data_pages[*data_pages_index] = pmm_alloc();
-        if (!proc->data_pages[*data_pages_index])
+        void *page = pmm_alloc();
+        if (!page)
         {
             return -RES_NOMEM;
         }
 
-        if (ph->p_memsz > ph->p_filesz)
+        memset(page, 0, PAGE_SIZE);
+
+        uint64_t page_vaddr = aligned_vaddr + i * PAGE_SIZE;
+        uint64_t file_page_offset = seg_offset + i * PAGE_SIZE - offset_in_page;
+
+        if (file_page_offset + PAGE_SIZE > seg_offset && file_page_offset < file_end)
         {
-            if (original)
+            size_t file_read_offset = 0;
+            size_t read_len = PAGE_SIZE;
+
+            if (file_page_offset < seg_offset)
             {
-                memcpy(proc->data_pages[*data_pages_index], original->data_pages[*data_pages_index], PAGE_SIZE);
-            }
-            else
-            {
-                memset(proc->data_pages[*data_pages_index], 0, PAGE_SIZE);
-            }
-        }
-        else
-        {
-            size_t remainder = ph->p_memsz - i * PAGE_SIZE;
-            if (remainder > PAGE_SIZE)
-            {
-                remainder = PAGE_SIZE;
+                file_read_offset = seg_offset - file_page_offset;
+                read_len -= file_read_offset;
             }
 
-            status = vfs_read(elf_file->node, remainder, proc->data_pages[*data_pages_index]);
-            if (status < 0)
+            if (file_page_offset + file_read_offset + read_len > file_end)
             {
-                return status;
+                read_len = file_end - (file_page_offset + file_read_offset);
             }
+
+            int status = vfs_seek(elf_file->node, file_page_offset + file_read_offset, SEEK_TYPE_SET);
+            if (status < 0)
+                return status;
+
+            status = vfs_read(elf_file->node, read_len, (uint8_t *)page + file_read_offset);
+            if (status < 0)
+                return status;
+        }
+        else if (original)
+        {
+            memcpy(page, original->data_pages[*data_pages_index], PAGE_SIZE);
         }
 
         int flags = PAGE_PRESENT | PAGE_USER;
-        if ((ph->p_flags & PF_W) == PF_W)
-        {
+        if (ph->p_flags & PF_W)
             flags |= PAGE_WRITABLE;
-        }
-        if ((ph->p_flags & PF_X) != PF_X)
-        {
+        if (!(ph->p_flags & PF_X))
             flags |= PAGE_NO_EXECUTE;
-        }
 
-        status = pml4_map(proc->pml4, (void *)(ph->p_vaddr + i * PAGE_SIZE), proc->data_pages[*data_pages_index], flags);
+        int status = pml4_map(proc->pml4, (void *)page_vaddr, page, flags);
         if (status < 0)
         {
             return status;
         }
 
-        *data_pages_index += 1;
+        proc->data_pages[*data_pages_index] = page;
+        (*data_pages_index)++;
     }
 
     return 0;

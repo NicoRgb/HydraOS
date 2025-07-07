@@ -10,10 +10,10 @@
 #include <kernel/proc/stream.h>
 
 /*
- kernel:  0x100000
- heap:    0x200000
- process: 0x400000
- stack:   0x800000
+ kernel:    0x100000
+ heap:      0x200000
+ process:   0x400000
+ stack:     0x800000
 */
 
 #define PROCESS_VADDR 0x400000

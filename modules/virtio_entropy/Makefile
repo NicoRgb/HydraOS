@@ -12,7 +12,7 @@ CC:=$(ARCH)-elf-gcc
 AS:=nasm
 
 .PHONY: all, clean
-all: build/virtio_video_module.a
+all: build/virtio_entropy_module.a
 
 clean:
 	@echo "RM\tbuild"
@@ -28,7 +28,7 @@ build/%.asm.o: src/%.asm
 	@echo "AS\t$@"
 	@nasm -f elf64 -o $@ $^
 
-build/virtio_video_module.a: $(OBJS)
+build/virtio_entropy_module.a: $(OBJS)
 	@mkdir -p $(@D)
 	@echo "AR\t$@"
 	@ar rcs $@ $^

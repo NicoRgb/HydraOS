@@ -3,8 +3,8 @@
 #include <kernel/kmm.h>
 #include <kernel/isr.h>
 
-virtio_device_t *virtio_dev = NULL;
-virtqueue_t *vq = NULL;
+static virtio_device_t *virtio_dev = NULL;
+static virtqueue_t *vq = NULL;
 
 int virtio_entropy_free(device_t *dev)
 {
@@ -14,7 +14,8 @@ int virtio_entropy_free(device_t *dev)
 
 int randomize_buffer(uint8_t *data, size_t size, device_t *dev)
 {
-    if (virtio_send_buffer(virtio_dev, vq, (uint64_t)buf, size) < 0)
+    (void)dev;
+    if (virtio_send_buffer(virtio_dev, vq, (uint64_t)data, size) < 0)
     {
         return -RES_EUNKNOWN;
     }
@@ -25,6 +26,7 @@ static void virtio_entropy_irq(interrupt_frame_t *frame)
 {
     (void)frame;
     uint8_t isr_status = *(volatile uint8_t *)virtio_dev->isr;
+    (void)isr_status;
 }
 
 extern driver_t virtio_entropy_driver;

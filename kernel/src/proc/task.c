@@ -86,7 +86,7 @@ process_t *process_create(const char *path)
     proc->pid = current_pid++;
 
     // stdin
-    device_t *stdin_dev = get_inputdev();
+    device_t *stdin_dev = get_device_by_type(DEVICE_INPUT, 0);
 
     if (!stdin_dev)
     {

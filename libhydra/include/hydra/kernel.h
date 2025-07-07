@@ -14,6 +14,18 @@
 #define _SYSCALL_OPEN 7
 #define _SYSCALL_CLOSE 8
 
+#define RES_SUCCESS 0
+#define RES_INVARG 1
+#define RES_OVERFLOW 2
+#define RES_CORRUPT 4
+#define RES_NOMEM 5
+#define RES_UNAVAILABLE 6
+#define RES_TIMEOUT 7
+#define RES_ACCESS_DENIED 8
+
+#define RES_EUNKNOWN 10
+#define RES_ETEST 11
+
 uint64_t syscall(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6);
 
 uint64_t syscall_read(uint64_t stream, uint8_t *data, size_t size);

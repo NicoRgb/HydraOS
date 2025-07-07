@@ -51,9 +51,10 @@ typedef struct
     uint32_t y;
     uint32_t width;
     uint32_t height;
-} video_rect_t;
+} __attribute__((packed)) video_rect_t;
 
 char inputdev_packet_to_ascii(inputpacket_t *packet);
+size_t get_framebuffer_size(video_rect_t *rect);
 
 struct _pci_device;
 
@@ -106,7 +107,9 @@ typedef struct device_ops
     int (*randomize_buffer)(uint8_t *data, size_t size, device_t *dev);
 
     // video
-    int (*get_display_rect)(video_rect_t *rect, device_t *dev);
+    int (*get_display_rect)(video_rect_t *rect, int display, device_t *dev);
+    uint32_t *(*create_framebuffer)(video_rect_t *rect, int display, device_t *dev);
+    int (*update_display)(video_rect_t *rect, void *framebuffer, device_t *dev);
 } device_ops_t;
 
 typedef struct driver
@@ -138,7 +141,7 @@ KRES init_devices(void);
 device_t *get_device(uint16_t vendor, uint16_t device);
 device_t *get_device_by_index(size_t index);
 
-device_t *get_inputdev(void);
+device_t *get_device_by_type(device_type_t type, size_t index);
 
 // device function wrapper
 
@@ -148,5 +151,9 @@ int device_write(char c, chardev_color_t fg, chardev_color_t bg, device_t *dev);
 int device_read_block(uint64_t lba, uint8_t *data, device_t *dev);
 int device_write_block(uint64_t lba, const uint8_t *data, device_t *dev);
 int device_eject(device_t *dev);
+int device_randomize_buffer(uint8_t *data, size_t size, device_t *dev);
+int device_get_display_rect(video_rect_t *rect, int display, device_t *dev);
+uint32_t *device_create_framebuffer(video_rect_t *rect, int display, device_t *dev);
+int device_update_display(video_rect_t *rect, void *framebuffer, device_t *dev);
 
 #endif

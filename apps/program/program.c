@@ -1,5 +1,7 @@
 #include <hydra/kernel.h>
+#include <hydra/video.h>
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char **argv)
 {
@@ -35,6 +37,28 @@ int main(int argc, char **argv)
     fputs(str, stdout);
 
     fclose(fp);
+
+    video_rect_t rect;
+    get_display_rect(0, &rect);
+    if (rect.width == 0)
+    {
+        fputs("failed to get display rect\n", stdout);
+        return 1;
+    }
+
+    printf("width %lld, height %lld\n", rect.width, rect.height);
+
+    uint32_t *fb = create_framebuffer(0, &rect);
+    if (!fb)
+    {
+        fputs("failed to create framebuffer\n", stdout);
+        return 1;
+    }
+
+    size_t fb_size = get_framebuffer_size(&rect);
+    memset((void *)fb, 0xFFFFFFFF, fb_size);
+
+    update_display(fb, &rect);
 
     return 0;
 }

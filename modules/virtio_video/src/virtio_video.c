@@ -2,6 +2,7 @@
 #include <kernel/dev/virtio.h>
 #include <kernel/kmm.h>
 #include <kernel/isr.h>
+#include <kernel/vec.h>
 
 typedef struct
 {
@@ -127,7 +128,7 @@ typedef struct
     virtio_gpu_ctrl_hdr_t hdr;
     uint32_t resource_id;
     uint32_t nr_entries;
-    virtio_gpu_mem_entry_t entries[]
+    virtio_gpu_mem_entry_t entries[];
 } __attribute__((packed)) virtio_gpu_resource_attach_backing_t;
 
 typedef struct
@@ -154,18 +155,9 @@ typedef struct
     uint32_t height;
 } virtio_resource_2d_t;
 
-virtio_device_t *virtio_dev = NULL;
-virtio_gpu_resp_display_info_t display_info = {};
-
-int virtio_video_free(device_t *dev)
-{
-    (void)dev;
-    return 0;
-}
-
-int virtio_video_get_display_rect(video_rect_t *rect, device_t *dev)
-{
-}
+static virtio_device_t *virtio_dev = NULL;
+static virtqueue_t *command_queue = NULL;
+static virtio_gpu_resp_display_info_t display_info = {};
 
 static int get_display_info(virtqueue_t *vq, virtio_gpu_resp_display_info_t *out)
 {
@@ -270,7 +262,7 @@ static int set_scanout(virtqueue_t *vq, virtio_resource_2d_t *resource, virtio_g
     return RES_SUCCESS;
 }
 
-static int transfer_to_host(virtqueue_t *vq, virtio_resource_2d_t *resource)
+static int transfer_to_host(virtqueue_t *vq, virtio_resource_2d_t *resource, virtio_gpu_rect_t *rect)
 {
     virtio_gpu_transfer_to_host_2d_t *cmd = (virtio_gpu_transfer_to_host_2d_t *)pmm_alloc();
     memset(cmd, 0, sizeof(virtio_gpu_transfer_to_host_2d_t));
@@ -278,10 +270,7 @@ static int transfer_to_host(virtqueue_t *vq, virtio_resource_2d_t *resource)
     cmd->resource_id = resource->id;
     cmd->offset = 0;
 
-    cmd->rect.width = resource->width;
-    cmd->rect.height = resource->height;
-    cmd->rect.x = 0;
-    cmd->rect.y = 0;
+    cmd->rect = *rect;
 
     virtio_gpu_ctrl_hdr_t *resp = (virtio_gpu_ctrl_hdr_t *)pmm_alloc();
 
@@ -299,17 +288,14 @@ static int transfer_to_host(virtqueue_t *vq, virtio_resource_2d_t *resource)
     return RES_SUCCESS;
 }
 
-static int flush_resource(virtqueue_t *vq, virtio_resource_2d_t *resource)
+static int flush_resource(virtqueue_t *vq, virtio_resource_2d_t *resource, virtio_gpu_rect_t *rect)
 {
     virtio_gpu_resource_flush_t *cmd = (virtio_gpu_resource_flush_t *)pmm_alloc();
     memset(cmd, 0, sizeof(virtio_gpu_resource_flush_t));
     cmd->hdr.type = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
     cmd->resource_id = resource->id;
 
-    cmd->rect.width = resource->width;
-    cmd->rect.height = resource->height;
-    cmd->rect.x = 0;
-    cmd->rect.y = 0;
+    cmd->rect = *rect;
 
     virtio_gpu_ctrl_hdr_t *resp = (virtio_gpu_ctrl_hdr_t *)pmm_alloc();
 
@@ -327,16 +313,128 @@ static int flush_resource(virtqueue_t *vq, virtio_resource_2d_t *resource)
     return RES_SUCCESS;
 }
 
+int virtio_video_free(device_t *dev)
+{
+    (void)dev;
+    return 0;
+}
+
+int virtio_video_get_display_rect(video_rect_t *rect, int display, device_t *dev)
+{
+    (void)dev;
+    
+    if (display >= 16 || !display_info.pmodes[display].enabled)
+    {
+        return -RES_INVARG;
+    }
+
+    memcpy(rect, &display_info.pmodes[display].rect, sizeof(video_rect_t));
+
+    return RES_SUCCESS;
+}
+
+typedef struct
+{
+    virtio_resource_2d_t resource;
+    int display;
+    void *buffer;
+} virtio_framebuffer_t;
+
+cvector(virtio_framebuffer_t) framebuffers = CVECTOR;
+
+static virtio_framebuffer_t *get_fb_by_buffer(void *buffer)
+{
+    for (size_t i = 0; i < cvector_size(framebuffers); i++)
+    {
+        if (framebuffers[i].buffer == buffer)
+        {
+            return &framebuffers[i];
+        }
+    }
+
+    return NULL;
+}
+
+uint32_t *virtio_video_create_framebuffer(video_rect_t *rect, int display, device_t *dev)
+{
+    (void)dev;
+
+    if (framebuffers == NULL)
+    {
+        cvector_init(framebuffers);
+    }
+
+    virtio_resource_2d_t framebuf_resource = {
+        .width = rect->width,
+        .height = rect->height,
+        .id = cvector_size(framebuffers) + 1,
+    };
+
+    if (resource_create_2d(command_queue, &framebuf_resource) < 0)
+    {
+        return NULL;
+    }
+
+    size_t framebuf_size = get_framebuffer_size(rect);
+    uint32_t *framebuf = pmm_alloc_contiguous(framebuf_size / PAGE_SIZE + 1);
+
+    if (resource_attach_backing(command_queue, &framebuf_resource, (uintptr_t)framebuf, framebuf_size) < 0)
+    {
+        return NULL;
+    }
+
+    if (set_scanout(command_queue, &framebuf_resource, (virtio_gpu_rect_t *)rect) < 0)
+    {
+        return NULL;
+    }
+
+    virtio_framebuffer_t fb = {
+        .resource = framebuf_resource,
+        .display = display,
+        .buffer = framebuf,
+    };
+
+    cvector_push(framebuffers, fb);
+
+    return framebuf;
+}
+
+int virtio_video_update_display(video_rect_t *rect, void *framebuffer, device_t *dev)
+{
+    (void)dev;
+
+    virtio_framebuffer_t *fb = get_fb_by_buffer(framebuffer);
+    if (!fb)
+    {
+        return -RES_INVARG;
+    }
+
+    if (transfer_to_host(command_queue, &fb->resource, (virtio_gpu_rect_t *)rect) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (flush_resource(command_queue, &fb->resource, (virtio_gpu_rect_t *)rect) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    return RES_SUCCESS;
+}
+
 static void virtio_video_irq(interrupt_frame_t *frame)
 {
     (void)frame;
     uint8_t isr_status = *(volatile uint8_t *)virtio_dev->isr;
+    (void)isr_status;
 }
 
 extern driver_t virtio_video_driver;
 device_ops_t virtio_video_ops = {
     .free = &virtio_video_free,
     .get_display_rect = &virtio_video_get_display_rect,
+    .create_framebuffer = &virtio_video_create_framebuffer,
+    .update_display = &virtio_video_update_display,
 };
 
 device_t *virtio_video_create(size_t index, pci_device_t *pci_dev)
@@ -354,7 +452,7 @@ device_t *virtio_video_create(size_t index, pci_device_t *pci_dev)
         return NULL;
     }
 
-    device->type = DEVICE_CHAR;
+    device->type = DEVICE_VIDEO;
     device->driver = &virtio_video_driver;
     device->ops = &virtio_video_ops;
     device->pci_dev = pci_dev;
@@ -364,7 +462,17 @@ device_t *virtio_video_create(size_t index, pci_device_t *pci_dev)
     register_interrupt_handler(43, &virtio_video_irq);
 
     virtio_dev = virtio_init(pci_dev);
-    virtqueue_t *command_queue = virtio_setup_queue(virtio_dev, 0);
+    if (!virtio_dev)
+    {
+        return NULL;
+    }
+
+    command_queue = virtio_setup_queue(virtio_dev, 0);
+    if (!command_queue)
+    {
+        return NULL;
+    }
+
     virtio_start(virtio_dev);
 
     if (get_display_info(command_queue, &display_info) < 0)
@@ -375,65 +483,6 @@ device_t *virtio_video_create(size_t index, pci_device_t *pci_dev)
     if (!display_info.pmodes[0].enabled)
     {
         LOG_WARNING("virtio gpu: no display connected");
-        return NULL;
-    }
-
-    virtio_resource_2d_t framebuf_resource = {
-        .width = display_info.pmodes[0].rect.width,
-        .height = display_info.pmodes[0].rect.height,
-        .id = 1,
-    };
-
-    if (resource_create_2d(command_queue, &framebuf_resource) < 0)
-    {
-        return NULL;
-    }
-
-    size_t framebuf_size = display_info.pmodes[0].rect.width * display_info.pmodes[0].rect.height * 4;
-    uint32_t *framebuf = pmm_alloc_contiguous(framebuf_size / PAGE_SIZE + 1);
-
-    if (resource_attach_backing(command_queue, &framebuf_resource, (uintptr_t)framebuf, framebuf_size) < 0)
-    {
-        return NULL;
-    }
-
-    virtio_gpu_rect_t scanout_rect = {
-        .width = framebuf_resource.width,
-        .height = framebuf_resource.height,
-        .x = 0,
-        .y = 0,
-    };
-
-    if (set_scanout(command_queue, &framebuf_resource, &scanout_rect) < 0)
-    {
-        return NULL;
-    }
-
-    for (size_t y = 0; y < framebuf_resource.height; ++y)
-    {
-        for (size_t x = 0; x < framebuf_resource.width; ++x)
-        {
-            uint8_t r = (uint8_t)((x * 255) / (framebuf_resource.width - 1));
-            uint8_t g = (uint8_t)((y * 255) / (framebuf_resource.height - 1));
-            uint8_t b = 128;
-            uint8_t a = 255;
-
-            framebuf[y * framebuf_resource.width + x] =
-                ((uint32_t)a << 24) |
-                ((uint32_t)b << 16) |
-                ((uint32_t)g << 8) |
-                ((uint32_t)r);
-        }
-    }
-
-    if (transfer_to_host(command_queue, &framebuf_resource) < 0)
-    {
-        return NULL;
-    }
-
-    if (flush_resource(command_queue, &framebuf_resource) < 0)
-    {
-        return NULL;
     }
 
     return device;

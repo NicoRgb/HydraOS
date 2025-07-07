@@ -12,7 +12,8 @@ int64_t start_shell(void)
 
     if (pid == 0)
     {
-        syscall_exec("0:/bin/shell", 0, NULL, 0, NULL);
+        const char *envp = "PATH=0:/bin/program";
+        syscall_exec("0:/bin/shell", 0, NULL, 1, &envp);
 
         fputs("SYSINIT -- ERROR UNRECOVERABLE -- FAILED TO EXECUTE PROCESS\n", stdout);
         syscall_exit(1);

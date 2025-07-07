@@ -16,7 +16,7 @@ all: build/libc.a
 build/%.o: src/%.c
 	@mkdir -p $(@D)
 	@echo "CC\t$@"
-	@$(CC) $^ -o $@ -c $(CFLAGS) -Iinclude
+	@$(CC) $^ -o $@ -c $(CFLAGS) -Iinclude -Iinclude_private
 
 build/%.asm.o: src/%.asm
 	@mkdir -p $(@D)

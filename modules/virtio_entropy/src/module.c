@@ -3,7 +3,7 @@
 #include <kernel/log.h>
 #include <kernel/dev/devm.h>
 
-driver_t virtio_video_driver = {
+driver_t virtio_entropy_driver = {
     .supported_type = DEVICE_RNG,
     .num_devices = 1,
     .init_device = &virtio_entropy_create,
@@ -11,8 +11,8 @@ driver_t virtio_video_driver = {
     .class_code = 0xFF,
     .subclass_code = 0xFF,
     .prog_if = 0xFF,
-    .vendor_id = ,
-    .device_id = ,
+    .vendor_id = 0x1AF4,
+    .device_id = 0x1005,
 
     .driver_name = "Virtio based Entropy Harvester",
     .device_name = "Virtual RNG",

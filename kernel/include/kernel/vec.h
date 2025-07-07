@@ -54,6 +54,6 @@ typedef struct
     }
 
 #define cvector_size(vec_ptr) \
-    _vec_get_metadata(vec_ptr)->size
+    (_vec_get_metadata(vec_ptr)->size)
 
 #endif
