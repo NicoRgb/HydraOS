@@ -1,7 +1,9 @@
 #include <hydra/kernel.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define LINE_ALLOCATION_SIZE 256
 #define TOKEN_BUFFER_SIZE 8
@@ -82,29 +84,114 @@ char **split_line(char *line)
     return tokens;
 }
 
+static bool is_full_path(const char *str)
+{
+    if (!str || !isdigit((unsigned char)str[0]))
+    {
+        return false;
+    }
+
+    return str[1] == ':' && str[2] == '/';
+}
+
+static bool file_exists(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file)
+    {
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+static char *strdup(const char *str)
+{
+    char *dup = malloc(strlen(str) + 1);
+    strcpy(dup, str);
+    return dup;
+}
+
 int shell_launch(char **args)
 {
+    char *path = NULL;
+    if (is_full_path(args[0]) && file_exists(args[0]))
+    {
+        path = strdup(args[0]);
+    }
+    else
+    {
+        const char *path_env = getenv("PATH");
+        if (!path_env)
+        {
+            printf("PATH variable not set\n");
+            return 1;
+        }
+
+        char *path_copy = strdup(path_env);
+        if (!path_copy)
+        {
+            printf("allocation failure");
+            return 1;
+        }
+
+        char *dir = strtok(path_copy, ";");
+        while (dir != NULL)
+        {
+            if (!is_full_path(dir))
+            {
+                dir = strtok(NULL, ";");
+                continue;
+            }
+
+            char *p = malloc(strlen(dir) + strlen(args[0]) + 2);
+            strcpy(p, dir);
+            p = strcat(p, "/");
+            p = strcat(p, args[0]);
+            
+            if (file_exists(p))
+            {
+                path = p;
+                break;
+            }
+
+            free(p);
+
+            dir = strtok(NULL, ";");
+        }
+
+        free(path_copy);
+    }
+
+    if (!path)
+    {
+        printf("%s: command not found\n", args[0]);
+        return 1;
+    }
+
     int64_t pid = syscall_fork();
     if (pid < 0)
     {
         fputs("failed to fork process\n", stdout);
+        free(path);
         syscall_exit(1);
     }
-
-    printf("PATH='%s'\n", getenv("PATH"));
     
     if (pid == 0)
     {
         uint16_t num_args;
         for (num_args = 0; args[num_args] != NULL; num_args++);
 
-        printf("executing %s\n", args[0]);
+        printf("executing %s\n", path);
         const char *env = "shell=hysh";
-        syscall_exec(args[0], num_args, (const char **)args, 1, &env);
+        syscall_exec(path, num_args, (const char **)args, 1, &env);
 
         fputs("failed to execute process\n", stdout);
+        free(path);
         syscall_exit(1);
     }
+
+    free(path);
 
     while (syscall_ping(pid) == pid);
 
@@ -152,6 +239,8 @@ void shell_loop(void)
 
 int main(void)
 {
+    printf("PATH='%s'\n", getenv("PATH"));
+
     while (1)
     {
         printf("> ");

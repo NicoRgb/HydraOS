@@ -213,7 +213,7 @@ page_table_t *kernel_pml4 = NULL;
 void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_structure)
 {
     (void)multiboot_signature;
-    klog_init(&klog_write_e9_and_vga);
+    klog_init(&klog_write_e9);
     memset(&boot_info, 0, sizeof(boot_info_t));
 
     if (IS_ERROR(parse_multiboot2_structure(multiboot_information_structure)))
