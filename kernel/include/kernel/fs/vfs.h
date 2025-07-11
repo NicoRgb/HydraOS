@@ -7,6 +7,9 @@
 #include <kernel/status.h>
 #include <kernel/fs/vpt.h>
 
+#include <kernel/dev/devm.h>
+#include <kernel/proc/stream.h>
+
 #define MAX_PATH 128
 
 #define FS_FILE 0x01
@@ -19,7 +22,7 @@
 
 struct _filesystem;
 
-typedef struct
+typedef struct _file_node
 {
     char local_path[MAX_PATH];
     int mount_id;
@@ -79,5 +82,10 @@ typedef struct _filesystem
 } filesystem_t;
 
 int register_filesystem(filesystem_t *fs);
+
+int vfs_mount_device(device_t *dev);
+
+stream_t *vfs_open_file(const char *path, uint8_t action, stream_t *stream);
+int vfs_close_file(stream_t *stream);
 
 #endif

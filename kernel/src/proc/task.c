@@ -85,46 +85,6 @@ process_t *process_create(const char *path)
 
     proc->pid = current_pid++;
 
-    // stdin
-    device_t *stdin_dev = get_device_by_type(DEVICE_INPUT, 0);
-
-    if (!stdin_dev)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    int res = stream_create_driver(&proc->streams[0], 0, stdin_dev);
-    if (res < 0)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    // stdout
-    device_t *stdout_dev = kprintf_get_cdev();
-
-    if (!stdout_dev)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    res = stream_create_driver(&proc->streams[1], 0, stdout_dev);
-    if (res < 0)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
-    // stderr
-    res = stream_create_driver(&proc->streams[2], 0, stdout_dev);
-    if (res < 0)
-    {
-        process_free(proc);
-        return NULL;
-    }
-
     elf_free(proc->elf);
     proc->elf = NULL;
 
@@ -259,6 +219,54 @@ int process_set_envars(process_t *proc, char **envars, uint16_t num_envars)
     return RES_SUCCESS;
 }
 
+int process_set_stdin(process_t *proc, stream_t *stdin)
+{
+    if (proc->streams[0].type != STREAM_TYPE_NULL)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    int res = stream_clone(stdin, &proc->streams[0]);
+    if (res < 0)
+    {
+        process_free(proc);
+        return -RES_EUNKNOWN;
+    }
+    return RES_SUCCESS;
+}
+
+int process_set_stdout(process_t *proc, stream_t *stdout)
+{
+    if (proc->streams[1].type != STREAM_TYPE_NULL)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    int res = stream_clone(stdout, &proc->streams[1]);
+    if (res < 0)
+    {
+        process_free(proc);
+        return -RES_EUNKNOWN;
+    }
+    return RES_SUCCESS;
+}
+
+int process_set_stderr(process_t *proc, stream_t *stderr)
+{
+    if (proc->streams[2].type != STREAM_TYPE_NULL)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    int res = stream_clone(stderr, &proc->streams[2]);
+    if (res < 0)
+    {
+        process_free(proc);
+        return -RES_EUNKNOWN;
+    }
+    return RES_SUCCESS;
+}
+
 int setup_initial_stack(process_t *proc)
 {
     uint8_t *stack_top = (uint8_t *)pml4_get_phys(proc->pml4, (void *)proc->task.state.rsp, true);
@@ -371,7 +379,7 @@ size_t process_insert_file(process_t *proc, const char *path, uint8_t open_actio
     {
         if (proc->streams[i].type == STREAM_TYPE_NULL)
         {
-            if (stream_create_file(&proc->streams[i], 0, path, open_action) < 0)
+            if (vfs_open_file(path, open_action, &proc->streams[i]) == NULL)
             {
                 return 0;
             }
@@ -384,7 +392,7 @@ size_t process_insert_file(process_t *proc, const char *path, uint8_t open_actio
 
 void process_remove_stream(process_t *proc, size_t index)
 {
-    stream_free(&proc->streams[index]);
+    vfs_close_file(&proc->streams[index]);
     proc->streams[index].type = STREAM_TYPE_NULL;
 }
 

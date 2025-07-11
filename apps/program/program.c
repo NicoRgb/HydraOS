@@ -12,6 +12,16 @@ int main(int argc, char **argv)
         printf("%s\n", argv[i]);
     }
 
+    FILE *cdev = fopen("9:/char0", "r");
+    if (!cdev)
+    {
+        fputs("failed to open char device\n", stdout);
+        return 1;
+    }
+
+    fputs("test123\n", cdev);
+    fclose(cdev);
+
     FILE *fp = fopen("0:/test.txt", "c");
     if (!fp)
     {

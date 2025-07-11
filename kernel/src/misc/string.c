@@ -39,7 +39,7 @@ int strncmp(const char *s1, const char *s2, size_t n)
     return (0);
 }
 
-char *strcpy(char *to, char *from)
+char *strcpy(char *to, const char *from)
 {
     size_t i = 0;
     for (i = 0; from[i] != 0x00; i++)
@@ -50,6 +50,16 @@ char *strcpy(char *to, char *from)
     to[i] = 0;
 
     return to;
+}
+
+char *strcat(char *s, const char *ct)
+{
+    char *_s = s;
+
+    for (; *s; s++);
+    while ((*s++ = *ct++));
+
+    return _s;
 }
 
 void *memset(void *dest, register int val, register size_t len)

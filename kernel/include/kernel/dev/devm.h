@@ -60,12 +60,12 @@ struct _pci_device;
 
 typedef enum
 {
-    DEVICE_BLOCK,
-    DEVICE_CHAR,
-    DEVICE_INPUT,
-    DEVICE_VIDEO,
-    DEVICE_RNG,
-    DEVICE_NET,
+    DEVICE_BLOCK = 0,
+    DEVICE_CHAR = 1,
+    DEVICE_INPUT = 2,
+    DEVICE_VIDEO = 3,
+    DEVICE_RNG = 4,
+    DEVICE_NET = 5,
 } device_type_t;
 
 #define BLOCKDEV_MODEL_MAX_LEN 41

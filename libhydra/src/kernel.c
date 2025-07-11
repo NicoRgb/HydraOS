@@ -44,9 +44,9 @@ uint64_t syscall_ping(uint64_t pid)
     return syscall(_SYSCALL_PING, pid, 0, 0, 0, 0, 0);
 }
 
-void syscall_exec(const uint8_t *path, uint16_t num_args, const char **args, uint16_t num_envars, const char **envars)
+void syscall_exec(const uint8_t *path, process_create_info_t *create_info)
 {
-    syscall(_SYSCALL_EXEC, (uint64_t)path, (uint64_t)num_args, (uint64_t)args, (uint64_t)num_envars, (uint64_t)envars, 0);
+    syscall(_SYSCALL_EXEC, (uint64_t)path, (uint64_t)create_info, 0, 0, 0, 0);
 }
  
 void *syscall_alloc(void)
@@ -62,4 +62,9 @@ uint64_t syscall_open(const uint8_t *path, uint8_t open_actions)
 void syscall_close(uint64_t stream)
 {
     syscall(_SYSCALL_CLOSE, stream, 0, 0, 0, 0, 0);
+}
+
+int syscall_pipe(void)
+{
+    return syscall(_SYSCALL_PIPE, 0, 0, 0, 0, 0, 0);
 }

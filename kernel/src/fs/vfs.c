@@ -1,6 +1,7 @@
 #include <kernel/fs/vfs.h>
 #include <kernel/kmm.h>
 #include <kernel/string.h>
+#include <kernel/vec.h>
 
 #define FILESYSTEMS_CAPACITY_INCREASE 3
 
@@ -436,4 +437,144 @@ int vfs_seek(file_node_t *node, size_t n, uint8_t type)
     }
 
     return 0;
+}
+
+typedef struct
+{
+    device_t *dev;
+    const char *name;
+} mounted_device_t;
+
+cvector(mounted_device_t) mounted_devices = CVECTOR;
+
+const char *const device_type_names[] = {
+    "block",
+    "char",
+    "input",
+    "video",
+    "rng",
+    "net",
+};
+
+static const char *generate_device_mount_name(device_t *dev)
+{
+    uint8_t index = 0;
+    for (size_t i = 0; i < cvector_size(mounted_devices); i++)
+    {
+        if (mounted_devices[i].dev->type == dev->type)
+        {
+            index++;
+        }
+    }
+
+    if (index > 9)
+    {
+        return NULL;
+    }
+
+    const char *type_str = "dev";
+    switch (dev->type)
+    {
+        case DEVICE_BLOCK:
+            type_str = "block";
+            break;
+        case DEVICE_CHAR:
+            type_str = "char";
+            break;
+        case DEVICE_INPUT:
+            type_str = "input";
+            break;
+        case DEVICE_VIDEO:
+            type_str = "video";
+            break;
+        case DEVICE_RNG:
+            type_str = "rng";
+            break;
+        case DEVICE_NET:
+            type_str = "net";
+            break;
+    }
+
+    size_t type_len = strlen(type_str);
+
+    char *res = kmalloc(type_len + 2);
+    if (!res) return NULL;
+
+    memcpy(res, type_str, type_len);
+    res[type_len] = '0' + index;
+    res[type_len + 1] = '\0';
+
+    return res;
+}
+
+int vfs_mount_device(device_t *dev)
+{
+    if (mounted_devices == CVECTOR)
+    {
+        cvector_init(mounted_devices);
+    }
+
+    const char *mount_name = generate_device_mount_name(dev);
+    if (!mount_name)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    mounted_device_t mount_dev = {
+        .dev = dev,
+        .name = mount_name,
+    };
+    cvector_push(mounted_devices, mount_dev);
+
+    return RES_SUCCESS;
+}
+
+stream_t *vfs_open_file(const char *path, uint8_t action, stream_t *stream)
+{
+    if (!path)
+    {
+        return NULL;
+    }
+
+    int id = extract_disk_id(path);
+    if (id < 0)
+    {
+        return NULL;
+    }
+
+    if (id == 9) // mounted device
+    {
+        for (size_t i = 0; i < cvector_size(mounted_devices); i++)
+        {
+            const char *p = (const char *)((uintptr_t)extract_path(path) + 1);
+
+            if (strncmp(mounted_devices[i].name, p, strlen(device_type_names[mounted_devices[i].dev->type]) + 1) == 0)
+            {
+                memset(stream, 0, sizeof(stream_t));
+                if (stream_create_driver(stream, 0, mounted_devices[i].dev) < 0)
+                {
+                    return NULL;
+                }
+
+                return stream;
+            }
+        }
+
+        return NULL;
+    }
+
+    memset(stream, 0, sizeof(stream_t));
+
+    if (stream_create_file(stream, 0, path, action))
+    {
+        return NULL;
+    }
+
+    return stream;
+}
+
+int vfs_close_file(stream_t *stream)
+{
+    stream_free(stream);
+    return RES_SUCCESS;
 }

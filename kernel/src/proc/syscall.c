@@ -99,11 +99,26 @@ int64_t syscall_ping(process_t *, int64_t pid, int64_t, int64_t, int64_t, int64_
     return 0;
 }
 
-int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _args, int64_t num_envars, int64_t _envars, int64_t, task_state_t *)
+typedef struct
 {
+    const char **args;
+    size_t num_args;
+    
+    const char **envars;
+    size_t num_envars;
+
+    uint64_t stdin_idx;
+    uint64_t stdout_idx;
+    uint64_t stderr_idx;
+} __attribute__((packed)) process_create_info_t;
+
+int64_t syscall_exec(process_t *proc, int64_t _path, int64_t _create_info, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+{
+    process_create_info_t *create_info = (process_create_info_t *)process_get_pointer(proc, (uintptr_t)_create_info);
+
     const char *path = process_get_pointer(proc, (uintptr_t)_path);
-    const char **args = (const char **)process_get_pointer(proc, (uintptr_t)_args);
-    const char **envars = (const char **)process_get_pointer(proc, (uintptr_t)_envars);
+    const char **args = (const char **)process_get_pointer(proc, (uintptr_t)create_info->args);
+    const char **envars = (const char **)process_get_pointer(proc, (uintptr_t)create_info->envars);
     uint64_t pid = proc->pid;
 
     process_t *exec = process_create(path);
@@ -112,13 +127,13 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
         return -RES_EUNKNOWN;
     }
 
-    char **arguments = kmalloc(num_args * sizeof(char *));
+    char **arguments = kmalloc(create_info->num_args * sizeof(char *));
     if (!arguments)
     {
         PANIC("out of kernel heap memory");
     }
 
-    for (uint16_t i = 0; i < num_args; i++)
+    for (uint16_t i = 0; i < create_info->num_args; i++)
     {
         arguments[i] = strdup(process_get_pointer(proc, (uintptr_t)args[i]));
         if (!arguments[i])
@@ -127,13 +142,13 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
         }
     }
 
-    char **environment_variables = kmalloc(num_envars * sizeof(char *));
+    char **environment_variables = kmalloc(create_info->num_envars * sizeof(char *));
     if (!environment_variables)
     {
         PANIC("out of kernel heap memory");
     }
 
-    for (uint16_t i = 0; i < num_envars; i++)
+    for (uint16_t i = 0; i < create_info->num_envars; i++)
     {
         environment_variables[i] = strdup(process_get_pointer(proc, (uintptr_t)envars[i]));
         if (!environment_variables[i])
@@ -142,13 +157,43 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t num_args, int64_t _
         }
     }
 
-    process_set_args(exec, arguments, num_args);
-    process_set_envars(exec, environment_variables, num_envars);
-    setup_initial_stack(exec);
+    if (process_set_args(exec, arguments, create_info->num_args) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (process_set_envars(exec, environment_variables, create_info->num_envars) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (process_set_stdin(exec, &proc->streams[create_info->stdin_idx]) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (process_set_stdout(exec, &proc->streams[create_info->stdout_idx]) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (process_set_stderr(exec, &proc->streams[create_info->stderr_idx]) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
+    if (setup_initial_stack(exec) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
 
     exec->pid = pid;
     
-    process_unregister(proc);
+    if (process_unregister(proc) < 0)
+    {
+        return -RES_EUNKNOWN;
+    }
+
     process_free(proc);
 
     if (IS_ERROR(process_register(exec)))
@@ -260,6 +305,18 @@ int64_t syscall_video_update_display(process_t *proc, int64_t _fb, int64_t _rect
     return status;
 }
 
+int64_t syscall_pipe(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+{
+    stream_t stream;
+    int res = stream_create_bidirectional(&stream, 0);
+    if (res < 0)
+    {
+        return res;
+    }
+    
+    return process_insert_stream(proc, &stream);
+}
+
 extern page_table_t *kernel_pml4;
 
 int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, int64_t arg5, task_state_t *state)
@@ -320,6 +377,11 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
     case 11:
         res = syscall_video_update_display(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
+        
+    case 12:
+        res = syscall_pipe(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
+        break;
+
     default:
         break;
     }

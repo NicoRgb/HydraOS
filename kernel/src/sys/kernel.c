@@ -351,6 +351,15 @@ void kmain()
         }
     } while (i > 0);
 
+    i = 0;
+    device_t *dev;
+    do
+    {
+        dev = get_device_by_index(i++);
+        vfs_mount_device(dev);
+    }
+    while (dev);
+
     LOG_INFO("starting sysinit...");
     process_t *proc = process_create("0:/bin/sysinit");
     if (!proc)

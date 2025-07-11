@@ -169,6 +169,12 @@ int shell_launch(char **args)
         return 1;
     }
 
+    int fd = syscall_pipe();
+    if (fd < 0)
+    {
+        fputs("failed to pipe\n", stdout);
+    }
+
     int64_t pid = syscall_fork();
     if (pid < 0)
     {
@@ -182,9 +188,16 @@ int shell_launch(char **args)
         uint16_t num_args;
         for (num_args = 0; args[num_args] != NULL; num_args++);
 
-        printf("executing %s\n", path);
-        const char *env = "shell=hysh";
-        syscall_exec(path, num_args, (const char **)args, 1, &env);
+        process_create_info_t create_info = {
+            .args = (const char **)args,
+            .num_args = num_args,
+            .envars = NULL,
+            .num_envars = 0,
+            .stdin_idx = (uint64_t)stdin,
+            .stdout_idx = (uint64_t)fd,
+            .stderr_idx = (uint64_t)stderr,
+        };
+        syscall_exec(path, &create_info);
 
         fputs("failed to execute process\n", stdout);
         free(path);
@@ -193,7 +206,20 @@ int shell_launch(char **args)
 
     free(path);
 
-    while (syscall_ping(pid) == pid);
+    char c = 0;
+    do
+    {
+        c = fgetc((FILE *)fd);
+        if (c == 0)
+        {
+            continue;
+        }
+        
+        fputc(c, stdout);
+    }
+    while (syscall_ping(pid) == pid || c != 0);
+
+    syscall_close((uint64_t)fd);
 
     return pid;
 }

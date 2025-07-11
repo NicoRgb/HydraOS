@@ -2,7 +2,6 @@
 #define _KERNEL_STREAM_H
 
 #include <kernel/dev/devm.h>
-#include <kernel/fs/vfs.h>
 #include <stdint.h>
 
 typedef enum
@@ -13,6 +12,17 @@ typedef enum
     STREAM_TYPE_DRIVER = 3
 } stream_type_t;
 
+struct _file_node;
+
+typedef struct
+{
+    uint8_t *buffer;
+    uint32_t refcount;
+    size_t write_offset;
+    size_t read_offset;
+    size_t max_size;
+} shared_ring_buffer_t;
+
 typedef struct
 {
     stream_type_t type;
@@ -22,14 +32,12 @@ typedef struct
     {
         struct
         {
-            uint8_t *buffer;
-            size_t size;
-            size_t max_size;
+            shared_ring_buffer_t *buffer;
         };
 
         struct
         {
-            file_node_t *node;
+            struct _file_node *node;
             char *path;
             uint8_t open_action;
         };
@@ -41,7 +49,7 @@ typedef struct
     };
 } stream_t;
 
-int stream_create_bidirectional(stream_t *stream, uint8_t flags, size_t size);
+int stream_create_bidirectional(stream_t *stream, uint8_t flags);
 int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_t open_action);
 int stream_create_driver(stream_t *stream, uint8_t flags, device_t *device);
 

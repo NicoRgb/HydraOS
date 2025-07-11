@@ -8,7 +8,8 @@
 size_t strlen(const char *str);
 int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
-char *strcpy(char *to, char *from);
+char *strcpy(char *to, const char *from);
+char *strcat(char *s, const char *ct);
 
 void *memset(void *dest, register int val, register size_t len);
 void memcpy(void *dest, const void *src, size_t len);

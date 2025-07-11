@@ -2,20 +2,29 @@
 #include <kernel/kmm.h>
 #include <kernel/string.h>
 #include <kernel/kprintf.h>
+#include <kernel/fs/vfs.h>
 
-int stream_create_bidirectional(stream_t *stream, uint8_t flags, size_t size)
+int stream_create_bidirectional(stream_t *stream, uint8_t flags)
 {
     stream->type = STREAM_TYPE_BIDIRECTIONAL;
     stream->flags = flags;
 
-    stream->buffer = kmalloc(size);
+    stream->buffer = kmalloc(sizeof(shared_ring_buffer_t));
     if (!stream->buffer)
     {
         return -RES_NOMEM;
     }
 
-    stream->size = 0;
-    stream->max_size = size;
+    stream->buffer->buffer = pmm_alloc();
+    if (!stream->buffer)
+    {
+        return -RES_NOMEM;
+    }
+    
+    stream->buffer->max_size = PAGE_SIZE;
+    stream->buffer->read_offset = 0;
+    stream->buffer->write_offset = 0;
+    stream->buffer->refcount = 1;
 
     return 0;
 }
@@ -51,7 +60,12 @@ void stream_free(stream_t *stream)
     switch (stream->type)
     {
     case STREAM_TYPE_BIDIRECTIONAL:
-        kfree(stream->buffer);
+        stream->buffer->refcount -= 1;
+        if (stream->buffer->refcount <= 0)
+        {
+            pmm_free((uint64_t *)stream->buffer->buffer);
+            kfree(stream->buffer);
+        }
         break;
     case STREAM_TYPE_FILE:
         vfs_close(stream->node);
@@ -78,11 +92,11 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
     switch (stream->type)
     {
     case STREAM_TYPE_BIDIRECTIONAL:
-        for (size_t i = 0; i < size && stream->size > 0; i++)
+        for (size_t i = 0; i < size && stream->buffer->read_offset != stream->buffer->write_offset; i++)
         {
-            data[i] = stream->buffer[i];            
+            data[i] = stream->buffer->buffer[stream->buffer->read_offset];
+            stream->buffer->read_offset = (stream->buffer->read_offset + 1) % stream->buffer->max_size;
             (*bytes_read)++;
-            stream->size--;
         }
         break;
     case STREAM_TYPE_FILE:
@@ -139,10 +153,18 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
     switch (stream->type)
     {
     case STREAM_TYPE_BIDIRECTIONAL:
-        for (size_t i = 0; i < size && stream->size < stream->max_size; i++)
+        for (size_t i = 0; i < size; i++)
         {
-            stream->buffer[stream->size++] = data[i];            
+            stream->buffer->buffer[stream->buffer->write_offset] = data[i];
+            stream->buffer->write_offset = (stream->buffer->write_offset + 1) % stream->buffer->max_size;
             (*bytes_written)++;
+        }
+        
+        // TODO: this is a suboptimal way to do this as it will leave artifacts after an overflow
+        if (stream->buffer->write_offset == stream->buffer->read_offset && *bytes_written > 0)
+        {
+            stream->buffer->buffer[stream->buffer->write_offset] = 0;
+            stream->buffer->write_offset = (stream->buffer->write_offset + 1) % stream->buffer->max_size;
         }
         break;
     case STREAM_TYPE_FILE:
@@ -191,7 +213,7 @@ int stream_flush(stream_t *stream)
 {
     if (stream->type == STREAM_TYPE_BIDIRECTIONAL)
     {
-        stream->size = 0;
+        stream->buffer->read_offset = stream->buffer->write_offset;
     }
 
     return 0;
@@ -199,11 +221,21 @@ int stream_flush(stream_t *stream)
 
 int stream_clone(stream_t *src, stream_t *dest)
 {
+    if (!src || !dest)
+    {
+        return -RES_INVARG;
+    }
+
     switch(src->type)
     {
     case STREAM_TYPE_BIDIRECTIONAL:
-        stream_create_bidirectional(dest, src->flags, src->max_size);
-        dest->size = src->size;
+        dest->type = src->type;
+        dest->flags = src->flags;
+        dest->buffer = src->buffer;
+        dest->buffer->refcount += 1;
+        dest->buffer->max_size = src->buffer->max_size;
+        dest->buffer->read_offset = src->buffer->read_offset;
+        dest->buffer->write_offset = src->buffer->write_offset;
         break;
     case STREAM_TYPE_FILE:
         stream_create_file(dest, src->flags, src->path, src->open_action);
