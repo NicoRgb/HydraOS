@@ -73,6 +73,8 @@ static void virtio_populate_device(virtio_device_t *device, pci_device_t *pci_de
                 break;
 
             case VIRTIO_PCI_CAP_DEVICE_CFG:
+                device->device_cfg = virtio_map_bar(pci_dev, cap.bar, cap.offset);
+                LOG_INFO("Found device config");
                 break;
 
             default:
@@ -143,7 +145,7 @@ virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index)
     return vq;
 }
 
-virtio_device_t *virtio_init(pci_device_t *pci_dev)
+virtio_device_t *virtio_init(pci_device_t *pci_dev, uint32_t (*feature_negotiate)(uint32_t features, virtio_device_t *device, bool *abort))
 {
     virtio_device_t *device = kmalloc(sizeof(virtio_device_t));
     if (!device)
@@ -170,8 +172,15 @@ virtio_device_t *virtio_init(pci_device_t *pci_dev)
     device->common->device_status |= VIRTIO_STATUS_ACKNOWLEDGE;
     device->common->device_status |= VIRTIO_STATUS_DRIVER;
 
+    bool abort = false;
+
     device->common->device_feature_select = 0;
-    uint32_t features = device->common->device_feature;
+    uint32_t features = feature_negotiate(device->common->device_feature, device, &abort);
+    if (abort)
+    {
+        kfree(device);
+        return NULL;
+    }
 
     device->common->driver_feature_select = 0;
     device->common->driver_feature = features;

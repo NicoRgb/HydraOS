@@ -422,6 +422,11 @@ int virtio_video_update_display(video_rect_t *rect, void *framebuffer, device_t 
     return RES_SUCCESS;
 }
 
+static uint32_t virtio_video_feature_negotiate(uint32_t features, virtio_device_t *device, bool *abort)
+{
+    return features;
+}
+
 static void virtio_video_irq(interrupt_frame_t *frame)
 {
     (void)frame;
@@ -461,9 +466,10 @@ device_t *virtio_video_create(size_t index, pci_device_t *pci_dev)
 
     register_interrupt_handler(43, &virtio_video_irq);
 
-    virtio_dev = virtio_init(pci_dev);
+    virtio_dev = virtio_init(pci_dev, virtio_video_feature_negotiate);
     if (!virtio_dev)
     {
+        kfree(device);
         return NULL;
     }
 

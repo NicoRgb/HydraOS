@@ -70,6 +70,7 @@ typedef struct __attribute__((packed))
 {
     virtio_pci_common_cfg_t *common;
     virtio_pci_notify_cap_t *notify;
+    void *device_cfg;
     uint8_t *isr;
     uint32_t notify_off_multiplier;
 } virtio_device_t;
@@ -121,7 +122,7 @@ typedef struct
     virtio_pci_common_cfg_t *common;
 } virtqueue_t;
 
-virtio_device_t *virtio_init(pci_device_t *pci_dev);
+virtio_device_t *virtio_init(pci_device_t *pci_dev, uint32_t (*feature_negotiate)(uint32_t features, virtio_device_t *device, bool *abort));
 KRES virtio_start(virtio_device_t *dev);
 virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index);
 

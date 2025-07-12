@@ -108,6 +108,8 @@ static int add_pci_device(uint8_t bus, uint8_t device, uint8_t function)
         populate_base_address_register(&dev->bars[bar_num], bus, device, function, bar_num);
     }
 
+    LOG_INFO("Discovered PCI Device (vendor: 0x%x, device: 0x%x)", dev->vendor_id, dev->device_id);
+
     return 0;
 }
 

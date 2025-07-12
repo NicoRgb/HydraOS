@@ -29,6 +29,11 @@ static void virtio_entropy_irq(interrupt_frame_t *frame)
     (void)isr_status;
 }
 
+static uint32_t virtio_entropy_feature_negotiate(uint32_t features, virtio_device_t *device, bool *abort)
+{
+    return features;
+}
+
 extern driver_t virtio_entropy_driver;
 device_ops_t virtio_entropy_ops = {
     .free = &virtio_entropy_free,
@@ -41,7 +46,7 @@ device_t *virtio_entropy_create(size_t index, pci_device_t *pci_dev)
 
     if (virtio_dev != NULL)
     {
-        PANIC("virtio gpu initialized twice");
+        PANIC("virtio entropy initialized twice");
     }
 
     device_t *device = kmalloc(sizeof(device_t));
@@ -59,7 +64,7 @@ device_t *virtio_entropy_create(size_t index, pci_device_t *pci_dev)
 
     register_interrupt_handler(42, &virtio_entropy_irq);
 
-    virtio_dev = virtio_init(pci_dev);
+    virtio_dev = virtio_init(pci_dev, virtio_entropy_feature_negotiate);
     vq = virtio_setup_queue(virtio_dev, 0);
     virtio_start(virtio_dev);
 

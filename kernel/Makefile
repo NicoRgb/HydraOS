@@ -39,7 +39,7 @@ build/%.asm.o: src/%.asm
 	@echo "AS\t$@"
 	@nasm -f elf64 -o $@ $^
 
-build/kernel.elf: $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(KOBJS) $(ROOT)/mod/fat32_module.a $(ROOT)/mod/mbr_module.a $(ROOT)/mod/ide_module.a $(ROOT)/mod/virtio_video_module.a $(ROOT)/mod/virtio_entropy_module.a $(CRTEND_OBJ) $(CRTN_OBJ)
+build/kernel.elf: $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(KOBJS) $(ROOT)/mod/fat32_module.a $(ROOT)/mod/mbr_module.a $(ROOT)/mod/ide_module.a $(ROOT)/mod/virtio_video_module.a $(ROOT)/mod/virtio_net_module.a $(ROOT)/mod/virtio_entropy_module.a $(CRTEND_OBJ) $(CRTN_OBJ)
 	@mkdir -p $(@D)
 	@echo "LD\t$@"
 	@$(LD) --whole-archive $^ --no-whole-archive -o $@ -T src/arch/$(ARCH)/linker.ld $(LDFLAGS)
