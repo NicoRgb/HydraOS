@@ -6,7 +6,10 @@
 #include <stdbool.h>
 
 #include <kernel/status.h>
-#include <kernel/kmm.h>
+
+void *kmalloc(size_t size);
+void kfree(void *ptr);
+void *krealloc(void *ptr, size_t old_size, size_t new_size);
 
 #define CVECTOR NULL
 

@@ -12,7 +12,7 @@ int64_t start_shell(void)
 
     if (pid == 0)
     {
-        const char *envp = "PATH=0:/bin";
+        const char *envp = "PATH=/bin";
 
         process_create_info_t create_info = {
             .args = NULL,
@@ -23,7 +23,7 @@ int64_t start_shell(void)
             .stdout_idx = (uint64_t)stdout,
             .stderr_idx = (uint64_t)stderr,
         };
-        syscall_exec("0:/bin/shell", &create_info);
+        syscall_exec("/bin/shell", &create_info);
 
         fputs("SYSINIT -- ERROR UNRECOVERABLE -- FAILED TO EXECUTE PROCESS\n", stdout);
         syscall_exit(1);
@@ -34,9 +34,9 @@ int64_t start_shell(void)
 
 int main(void)
 {
-    _stdin = (uint64_t)fopen("9:/input0", "r");
-    _stdout = (uint64_t)fopen("9:/char1", "r");
-    _stderr = (uint64_t)fopen("9:/char1", "r");
+    _stdin = (uint64_t)fopen("/dev/input0", "r");
+    _stdout = (uint64_t)fopen("/dev/char1", "r");
+    _stderr = (uint64_t)fopen("/dev/char1", "r");
 
     while (1)
     {

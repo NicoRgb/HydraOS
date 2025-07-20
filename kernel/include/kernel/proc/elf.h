@@ -6,6 +6,7 @@
 
 #include <kernel/status.h>
 #include <kernel/fs/vfs.h>
+#include <kernel/proc/stream.h>
 
 #define PF_X 0x01
 #define PF_W 0x02
@@ -129,7 +130,7 @@ typedef struct
 
 typedef struct
 {
-    file_node_t *node;
+    stream_t *file;
 
     Elf64_Ehdr *header;
     Elf64_Phdr *pheader;

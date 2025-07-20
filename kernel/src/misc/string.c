@@ -410,6 +410,17 @@ char *strdup(const char *s1)
     return str;
 }
 
+char *strndup(const char *s1, size_t len)
+{
+    char *str = kmalloc(len + 1);
+    if (str)
+    {
+        memcpy(str, s1, len);
+    }
+    str[len] = 0;
+    return str;
+}
+
 int toupper(int c)
 {
     if (c >= 'a' && c <= 'z')

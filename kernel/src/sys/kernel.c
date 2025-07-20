@@ -11,6 +11,7 @@
 #include <kernel/kernel.h>
 #include <kernel/fs/vpt.h>
 #include <kernel/fs/vfs.h>
+#include <kernel/fs/devfs.h>
 #include <kernel/proc/task.h>
 #include <kernel/proc/scheduler.h>
 #include <kernel/pit.h>
@@ -342,7 +343,7 @@ void kmain()
             LOG_INFO(" - parititon type: 0x%x", part->type);
             if (part->type == 0x83)
             {
-                if (vfs_mount_blockdev(part) < 0)
+                if (vfs_mount_blockdev(part, "/") < 0)
                 {
                     PANIC("failed to mount partition");
                 }
@@ -351,20 +352,28 @@ void kmain()
         }
     } while (i > 0);
 
+    if (IS_ERROR(vfs_mount_filesystem(&devfs, "/dev")))
+    {
+        PANIC("failed to mount devfs");
+    }
+
     i = 0;
     device_t *dev;
     do
     {
         dev = get_device_by_index(i++);
-        vfs_mount_device(dev);
+        if (IS_ERROR(devfs_mount_device(dev)))
+        {
+            PANIC("failed to mount device");
+        }
     }
     while (dev);
 
     LOG_INFO("starting sysinit...");
-    process_t *proc = process_create("0:/bin/sysinit");
+    process_t *proc = process_create("/bin/sysinit");
     if (!proc)
     {
-        PANIC("failed to load '0:/bin/sysinit'");
+        PANIC("failed to load '/bin/sysinit'");
     }
 
     if (process_register(proc) < 0)
@@ -377,5 +386,5 @@ void kmain()
     syscall_init();
     execute_next_process();
 
-    PANIC("failed to launch '0:/bin/sysinit'");
+    PANIC("failed to launch '/bin/sysinit'");
 }

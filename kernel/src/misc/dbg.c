@@ -1,6 +1,7 @@
 #include <kernel/log.h>
 #include <kernel/dbg.h>
 #include <kernel/kernel.h>
+#include <kernel/proc/elf.h>
 
 // STACK SMASH PROTECTOR
 

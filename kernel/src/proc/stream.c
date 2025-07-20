@@ -4,55 +4,74 @@
 #include <kernel/kprintf.h>
 #include <kernel/fs/vfs.h>
 
-int stream_create_bidirectional(stream_t *stream, uint8_t flags)
+stream_t *stream_create_bidirectional(uint8_t flags)
 {
+    stream_t *stream = kmalloc(sizeof(stream_t));
+    if (!stream)
+    {
+        return NULL;
+    }
+
+    memset(stream, 0, sizeof(stream_t));
+
     stream->type = STREAM_TYPE_BIDIRECTIONAL;
     stream->flags = flags;
 
     stream->buffer = kmalloc(sizeof(shared_ring_buffer_t));
     if (!stream->buffer)
     {
-        return -RES_NOMEM;
+        return NULL;
     }
 
     stream->buffer->buffer = pmm_alloc();
     if (!stream->buffer)
     {
-        return -RES_NOMEM;
+        return NULL;
     }
     
     stream->buffer->max_size = PAGE_SIZE;
     stream->buffer->read_offset = 0;
     stream->buffer->write_offset = 0;
     stream->buffer->refcount = 1;
+    stream->mount = NULL;
 
-    return 0;
+    return stream;
 }
 
-int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_t open_action)
+stream_t *stream_create_file(struct _file_node *node, mount_node_t *mount)
 {
-    stream->type = STREAM_TYPE_FILE;
-    stream->flags = flags;
-    stream->path = strdup(path);
-    stream->open_action = open_action;
-
-    stream->node = vfs_open(path, open_action);
-    if (!stream->node)
+    stream_t *stream = kmalloc(sizeof(stream_t));
+    if (!stream)
     {
-        return -RES_EUNKNOWN;
+        return NULL;
     }
 
-    return 0;
+    memset(stream, 0, sizeof(stream_t));
+
+    stream->type = STREAM_TYPE_FILE;
+    stream->node = node;
+    stream->mount = mount;
+
+    return stream;
 }
 
-int stream_create_driver(stream_t *stream, uint8_t flags, device_t *device)
+stream_t *stream_create_driver(uint8_t flags, device_t *device, mount_node_t *mount)
 {
+    stream_t *stream = kmalloc(sizeof(stream_t));
+    if (!stream)
+    {
+        return NULL;
+    }
+
+    memset(stream, 0, sizeof(stream_t));
+
     stream->type = STREAM_TYPE_DRIVER;
     stream->flags = flags;
+    stream->mount = mount;
 
     stream->device = device;
 
-    return 0;
+    return stream;
 }
 
 void stream_free(stream_t *stream)
@@ -68,8 +87,7 @@ void stream_free(stream_t *stream)
         }
         break;
     case STREAM_TYPE_FILE:
-        vfs_close(stream->node);
-        kfree(stream->path);
+        vfs_close(stream);
         break;
     case STREAM_TYPE_DRIVER:
         break;
@@ -102,7 +120,7 @@ int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read
     case STREAM_TYPE_FILE:
         // TODO: maybe check for filesize and offset
         *bytes_read = size;
-        int res = vfs_read(stream->node, size, data);
+        int res = vfs_read(stream, size, data);
         if (res < 0)
         {
             return -RES_EUNKNOWN;
@@ -169,7 +187,7 @@ int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *byt
         break;
     case STREAM_TYPE_FILE:
         *bytes_written = size;
-        int res = vfs_write(stream->node, size, data);
+        int res = vfs_write(stream, size, data);
         if (res < 0)
         {
             return -RES_EUNKNOWN;
@@ -219,16 +237,25 @@ int stream_flush(stream_t *stream)
     return 0;
 }
 
-int stream_clone(stream_t *src, stream_t *dest)
+stream_t *stream_clone(stream_t *src)
 {
-    if (!src || !dest)
+    if (!src)
     {
-        return -RES_INVARG;
+        return NULL;
     }
 
     switch(src->type)
     {
     case STREAM_TYPE_BIDIRECTIONAL:
+    {
+        stream_t *dest = kmalloc(sizeof(stream_t));
+        if (!dest)
+        {
+            return NULL;
+        }
+
+        memset(dest, 0, sizeof(stream_t));
+
         dest->type = src->type;
         dest->flags = src->flags;
         dest->buffer = src->buffer;
@@ -236,16 +263,16 @@ int stream_clone(stream_t *src, stream_t *dest)
         dest->buffer->max_size = src->buffer->max_size;
         dest->buffer->read_offset = src->buffer->read_offset;
         dest->buffer->write_offset = src->buffer->write_offset;
-        break;
+
+        return dest;
+    }
     case STREAM_TYPE_FILE:
-        stream_create_file(dest, src->flags, src->path, src->open_action);
-        break;
+        return stream_create_file(src->node, src->mount);
     case STREAM_TYPE_DRIVER:
-        stream_create_driver(dest, src->flags, src->device);
-        break;
+        return stream_create_driver(src->flags, src->device, src->mount);
     default:
-        return -RES_INVARG;
+        return NULL;
     }
 
-    return 0;
+    return NULL;
 }

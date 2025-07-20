@@ -66,8 +66,8 @@ elf_file_t *elf_load(const char *path)
 
     memset(res, 0, sizeof(elf_file_t));
 
-    res->node = vfs_open(path, OPEN_ACTION_READ);
-    if (!res->node)
+    res->file = vfs_open(path, OPEN_ACTION_READ);
+    if (!res->file)
     {
         elf_free(res);
         return NULL;
@@ -80,7 +80,7 @@ elf_file_t *elf_load(const char *path)
         return NULL;
     }
 
-    if (vfs_read(res->node, sizeof(Elf64_Ehdr), (uint8_t *)res->header) < 0)
+    if (vfs_read(res->file, sizeof(Elf64_Ehdr), (uint8_t *)res->header) < 0)
     {
         elf_free(res);
         return NULL;
@@ -98,13 +98,13 @@ elf_file_t *elf_load(const char *path)
         return NULL;
     }
 
-    if (vfs_seek(res->node, res->header->e_phoff, SEEK_TYPE_SET) < 0)
+    if (vfs_seek(res->file, res->header->e_phoff, SEEK_TYPE_SET) < 0)
     {
         elf_free(res);
         return NULL;
     }
 
-    if (vfs_read(res->node, sizeof(Elf64_Phdr) * res->header->e_phnum, (uint8_t *)res->pheader) < 0)
+    if (vfs_read(res->file, sizeof(Elf64_Phdr) * res->header->e_phnum, (uint8_t *)res->pheader) < 0)
     {
         elf_free(res);
         return NULL;
@@ -136,9 +136,9 @@ void elf_free(elf_file_t *file)
         kfree(file->pheader);
     }
 
-    if (file->node)
+    if (file->file)
     {
-        vfs_close(file->node);
+        stream_free(file->file);
     }
 
     kfree(file);
@@ -191,11 +191,11 @@ static int load_phdr(elf_file_t *elf_file, Elf64_Phdr *ph, process_t *proc, uint
                 read_len = file_end - (file_page_offset + file_read_offset);
             }
 
-            int status = vfs_seek(elf_file->node, file_page_offset + file_read_offset, SEEK_TYPE_SET);
+            int status = vfs_seek(elf_file->file, file_page_offset + file_read_offset, SEEK_TYPE_SET);
             if (status < 0)
                 return status;
 
-            status = vfs_read(elf_file->node, read_len, (uint8_t *)page + file_read_offset);
+            status = vfs_read(elf_file->file, read_len, (uint8_t *)page + file_read_offset);
             if (status < 0)
                 return status;
         }

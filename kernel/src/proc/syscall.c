@@ -33,7 +33,7 @@ int64_t syscall_read(process_t *proc, int64_t stream, int64_t data, int64_t size
     }
 
     size_t bytes_read = 0;
-    int res = stream_read(&proc->streams[stream], buf, size, &bytes_read);
+    int res = stream_read(proc->streams[stream], buf, size, &bytes_read);
     if (res < 0)
     {
         return res;
@@ -51,7 +51,7 @@ int64_t syscall_write(process_t *proc, int64_t stream, int64_t data, int64_t siz
     }
 
     size_t bytes_written = 0;
-    int res = stream_write(&proc->streams[stream], buf, size, &bytes_written);
+    int res = stream_write(proc->streams[stream], buf, size, &bytes_written);
     if (res < 0)
     {
         return res;
@@ -167,17 +167,17 @@ int64_t syscall_exec(process_t *proc, int64_t _path, int64_t _create_info, int64
         return -RES_EUNKNOWN;
     }
 
-    if (process_set_stdin(exec, &proc->streams[create_info->stdin_idx]) < 0)
+    if (process_set_stdin(exec, proc->streams[create_info->stdin_idx]) < 0)
     {
         return -RES_EUNKNOWN;
     }
 
-    if (process_set_stdout(exec, &proc->streams[create_info->stdout_idx]) < 0)
+    if (process_set_stdout(exec, proc->streams[create_info->stdout_idx]) < 0)
     {
         return -RES_EUNKNOWN;
     }
 
-    if (process_set_stderr(exec, &proc->streams[create_info->stderr_idx]) < 0)
+    if (process_set_stderr(exec, proc->streams[create_info->stderr_idx]) < 0)
     {
         return -RES_EUNKNOWN;
     }
@@ -307,14 +307,13 @@ int64_t syscall_video_update_display(process_t *proc, int64_t _fb, int64_t _rect
 
 int64_t syscall_pipe(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
-    stream_t stream;
-    int res = stream_create_bidirectional(&stream, 0);
-    if (res < 0)
+    stream_t *stream = stream_create_bidirectional(0);
+    if (!stream)
     {
-        return res;
+        return 0;
     }
     
-    return process_insert_stream(proc, &stream);
+    return process_insert_stream(proc, stream);
 }
 
 extern page_table_t *kernel_pml4;

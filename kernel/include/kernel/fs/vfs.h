@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <kernel/vec.h>
+
 #include <kernel/status.h>
 #include <kernel/fs/vpt.h>
 
@@ -22,10 +24,22 @@
 
 struct _filesystem;
 
+typedef struct _mount_node
+{
+    virtual_blockdev_t *vbdev;
+    struct _filesystem *fs;
+    char path[MAX_PATH];
+
+    void *fs_data;
+
+    struct _mount_node *parent;
+    cvector(struct _mount_node *) children;
+} mount_node_t;
+
 typedef struct _file_node
 {
     char local_path[MAX_PATH];
-    int mount_id;
+    mount_node_t *mount;
     struct _filesystem *fs;
 
     size_t offset;
@@ -44,11 +58,28 @@ typedef struct _file_node
 
 typedef struct
 {
-    char path[MAX_PATH + 13]; // global path
+    char path[MAX_PATH]; // global path
 } dirent_t;
 
-int vfs_mount_blockdev(virtual_blockdev_t *vbdev);
-int vfs_unmount_blockdev(int id);
+typedef struct _filesystem
+{
+    void *(*fs_init)(virtual_blockdev_t *);
+    int (*fs_free)(virtual_blockdev_t *, void *);
+    int (*fs_test)(virtual_blockdev_t *);
+
+    stream_t *(*fs_open)(const char *, uint8_t, mount_node_t *);
+    int (*fs_close)(stream_t *);
+    int (*fs_read)(stream_t *, size_t, uint8_t *);
+    int (*fs_write)(stream_t *, size_t, const uint8_t *);
+    int (*fs_readdir)(stream_t *, int, char *);
+    int (*fs_delete)(stream_t *);
+} filesystem_t;
+
+int register_filesystem(filesystem_t *fs);
+
+int vfs_mount_blockdev(virtual_blockdev_t *vbdev, const char *path);
+int vfs_mount_filesystem(filesystem_t *fs, const char *path);
+//int vfs_unmount_blockdev(const char *path);
 
 #define OPEN_ACTION_READ 0
 #define OPEN_ACTION_WRITE 1
@@ -59,33 +90,12 @@ int vfs_unmount_blockdev(int id);
 #define SEEK_TYPE_ADD 1
 #define SEEK_TYPE_END 2
 
-file_node_t *vfs_open(const char *path, uint8_t action);
-int vfs_close(file_node_t *node);
-int vfs_read(file_node_t *node, size_t size, uint8_t *buf);
-int vfs_write(file_node_t *node, size_t size, const uint8_t *buf);
-int vfs_readdir(file_node_t *node, int index, dirent_t *dirent);
-int vfs_delete(file_node_t *node); // doesnt close node
-int vfs_seek(file_node_t *node, size_t n, uint8_t type);
-
-typedef struct _filesystem
-{
-    void *(*fs_init)(virtual_blockdev_t *);
-    int (*fs_free)(virtual_blockdev_t *, void *);
-    int (*fs_test)(virtual_blockdev_t *);
-
-    file_node_t *(*fs_open)(const char *, uint8_t, virtual_blockdev_t *, void *);
-    int (*fs_close)(file_node_t *, virtual_blockdev_t *, void *);
-    int (*fs_read)(file_node_t *, size_t, uint8_t *, virtual_blockdev_t *, void *);
-    int (*fs_write)(file_node_t *, size_t, const uint8_t *, virtual_blockdev_t *, void *);
-    int (*fs_readdir)(file_node_t *, int, char *, virtual_blockdev_t *, void *);
-    int (*fs_delete)(file_node_t *, virtual_blockdev_t *, void *);
-} filesystem_t;
-
-int register_filesystem(filesystem_t *fs);
-
-int vfs_mount_device(device_t *dev);
-
-stream_t *vfs_open_file(const char *path, uint8_t action, stream_t *stream);
-int vfs_close_file(stream_t *stream);
+stream_t *vfs_open(const char *path, uint8_t action);
+int vfs_close(stream_t *stream);
+int vfs_read(stream_t *stream, size_t size, uint8_t *buf);
+int vfs_write(stream_t *stream, size_t size, const uint8_t *buf);
+int vfs_readdir(stream_t *stream, int index, dirent_t *dirent);
+int vfs_delete(stream_t *stream); // doesnt close node
+int vfs_seek(stream_t *stream, size_t n, uint8_t type);
 
 #endif

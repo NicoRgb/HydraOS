@@ -12,7 +12,7 @@ int main(int argc, char **argv)
         printf("%s\n", argv[i]);
     }
 
-    FILE *cdev = fopen("9:/char0", "r");
+    FILE *cdev = fopen("/dev/char0", "r");
     if (!cdev)
     {
         fputs("failed to open char device\n", stdout);
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     fputs("test123\n", cdev);
     fclose(cdev);
 
-    FILE *fp = fopen("0:/test.txt", "c");
+    FILE *fp = fopen("/test.txt", "c");
     if (!fp)
     {
         fputs("failed to open file\n", stdout);
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 
     fclose(fp);
 
-    fp = fopen("0:/test.txt", "r");
+    fp = fopen("/test.txt", "r");
     if (!fp)
     {
         fputs("failed to open file\n", stdout);

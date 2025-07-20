@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <kernel/proc/elf.h>
 
 void trace_stack(uint32_t max_frames);
 

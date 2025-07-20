@@ -31,6 +31,7 @@ char *strtok(char *str, char *delim);
 char *strrchr(const char *str, int ch);
 int tolower(int c);
 char *strdup(const char *s1);
+char *strndup(const char *s1, size_t len);
 
 int toupper(int c);
 int isalnum(int c);

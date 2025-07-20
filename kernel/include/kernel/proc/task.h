@@ -55,7 +55,7 @@ typedef struct _process
     void *heap_pages[PROCESS_MAX_HEAP_PAGES];
     size_t num_heap_pages;
 
-    stream_t streams[PROCESS_MAX_STREAMS];
+    stream_t *streams[PROCESS_MAX_STREAMS];
 
     char **arguments;
     uint16_t num_arguments;

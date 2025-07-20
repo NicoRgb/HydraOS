@@ -13,6 +13,7 @@ typedef enum
 } stream_type_t;
 
 struct _file_node;
+struct _mount_node;
 
 typedef struct
 {
@@ -27,6 +28,7 @@ typedef struct
 {
     stream_type_t type;
     uint8_t flags; // not yet used
+    struct _mount_node *mount;
 
     union
     {
@@ -38,8 +40,6 @@ typedef struct
         struct
         {
             struct _file_node *node;
-            char *path;
-            uint8_t open_action;
         };
 
         struct
@@ -49,15 +49,15 @@ typedef struct
     };
 } stream_t;
 
-int stream_create_bidirectional(stream_t *stream, uint8_t flags);
-int stream_create_file(stream_t *stream, uint8_t flags, const char *path, uint8_t open_action);
-int stream_create_driver(stream_t *stream, uint8_t flags, device_t *device);
+stream_t *stream_create_bidirectional(uint8_t flags);
+stream_t *stream_create_file(struct _file_node *node, struct _mount_node *mount);
+stream_t *stream_create_driver(uint8_t flags, device_t *device, struct _mount_node *mount);
 
 void stream_free(stream_t *stream);
 
 int stream_read(stream_t *stream, uint8_t *data, size_t size, size_t *bytes_read);
 int stream_write(stream_t *stream, const uint8_t *data, size_t size, size_t *bytes_written);
 int stream_flush(stream_t *stream);
-int stream_clone(stream_t *src, stream_t *dest);
+stream_t *stream_clone(stream_t *src);
 
 #endif

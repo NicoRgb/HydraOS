@@ -78,7 +78,7 @@ process_t *process_create(const char *path)
         return NULL;
     }
 
-    memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t));
+    memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t *));
 
     proc->task.state.rsp = PROCESS_STACK_VADDR_BASE + PROCESS_STACK_SIZE - 16;
     proc->next = NULL;
@@ -180,13 +180,13 @@ process_t *process_clone(process_t *_proc)
         return NULL;
     }
 
-    memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t));
+    memset(proc->streams, 0, PROCESS_MAX_STREAMS * sizeof(stream_t *));
     for (uint64_t i = 0; i < PROCESS_MAX_STREAMS; i++)
     {
-        if (_proc->streams[i].type != STREAM_TYPE_NULL)
+        if (_proc->streams[i] != NULL)
         {
-            int res = stream_clone(&_proc->streams[i], &proc->streams[i]);
-            if (res < 0)
+            proc->streams[i] = stream_clone(_proc->streams[i]);
+            if (!proc->streams[i])
             {
                 process_free(proc);
                 return NULL;
@@ -221,13 +221,13 @@ int process_set_envars(process_t *proc, char **envars, uint16_t num_envars)
 
 int process_set_stdin(process_t *proc, stream_t *stdin)
 {
-    if (proc->streams[0].type != STREAM_TYPE_NULL)
+    if (proc->streams[0] != NULL)
     {
         return -RES_EUNKNOWN;
     }
 
-    int res = stream_clone(stdin, &proc->streams[0]);
-    if (res < 0)
+    proc->streams[0] = stream_clone(stdin);
+    if (!proc->streams[0])
     {
         process_free(proc);
         return -RES_EUNKNOWN;
@@ -237,13 +237,13 @@ int process_set_stdin(process_t *proc, stream_t *stdin)
 
 int process_set_stdout(process_t *proc, stream_t *stdout)
 {
-    if (proc->streams[1].type != STREAM_TYPE_NULL)
+    if (proc->streams[1] != NULL)
     {
         return -RES_EUNKNOWN;
     }
 
-    int res = stream_clone(stdout, &proc->streams[1]);
-    if (res < 0)
+    proc->streams[1] = stream_clone(stdout);
+    if (!proc->streams[1])
     {
         process_free(proc);
         return -RES_EUNKNOWN;
@@ -253,13 +253,13 @@ int process_set_stdout(process_t *proc, stream_t *stdout)
 
 int process_set_stderr(process_t *proc, stream_t *stderr)
 {
-    if (proc->streams[2].type != STREAM_TYPE_NULL)
+    if (proc->streams[2] != NULL)
     {
         return -RES_EUNKNOWN;
     }
 
-    int res = stream_clone(stderr, &proc->streams[2]);
-    if (res < 0)
+    proc->streams[2] = stream_clone(stderr);
+    if (!proc->streams[2])
     {
         process_free(proc);
         return -RES_EUNKNOWN;
@@ -356,16 +356,16 @@ void *process_allocate_page(process_t *proc)
 
 size_t process_insert_stream(process_t *proc, stream_t *stream)
 {
+    if (!stream)
+    {
+        return 0;
+    }
+
     for (size_t i = 0; i < PROCESS_MAX_STREAMS; i++)
     {
-        if (proc->streams[i].type == STREAM_TYPE_NULL)
+        if (proc->streams[i] == NULL)
         {
-            int res = stream_clone(stream, &proc->streams[i]);
-            if (res < 0)
-            {
-                return 0;
-            }
-
+            proc->streams[i] = stream;
             return i;
         }
     }
@@ -377,9 +377,10 @@ size_t process_insert_file(process_t *proc, const char *path, uint8_t open_actio
 {
     for (size_t i = 0; i < PROCESS_MAX_STREAMS; i++)
     {
-        if (proc->streams[i].type == STREAM_TYPE_NULL)
+        if (proc->streams[i] == NULL)
         {
-            if (vfs_open_file(path, open_action, &proc->streams[i]) == NULL)
+            proc->streams[i] = vfs_open(path, open_action);
+            if (!proc->streams[i])
             {
                 return 0;
             }
@@ -392,8 +393,8 @@ size_t process_insert_file(process_t *proc, const char *path, uint8_t open_actio
 
 void process_remove_stream(process_t *proc, size_t index)
 {
-    vfs_close_file(&proc->streams[index]);
-    proc->streams[index].type = STREAM_TYPE_NULL;
+    stream_free(proc->streams[index]);
+    proc->streams[index] = NULL;
 }
 
 void process_free(process_t *proc)
@@ -439,9 +440,9 @@ void process_free(process_t *proc)
 
     for (int i = 0; i < PROCESS_MAX_STREAMS; i++)
     {
-        if (proc->streams[i].type != STREAM_TYPE_NULL)
+        if (proc->streams[i] != NULL)
         {
-            stream_free(&proc->streams[i]);
+            stream_free(proc->streams[i]);
         }
     }
 

@@ -1470,9 +1470,9 @@ int delete_fat32(const char *path, boot_sector_t *boot_sector, virtual_blockdev_
     return 0;
 }
 
-file_node_t *fat32_open(const char *path, uint8_t action, virtual_blockdev_t *bdev, void *data)
+stream_t *fat32_open(const char *path, uint8_t action, mount_node_t *mount)
 {
-    if (!bdev || !data)
+    if (!path)
     {
         return NULL;
     }
@@ -1485,21 +1485,21 @@ file_node_t *fat32_open(const char *path, uint8_t action, virtual_blockdev_t *bd
 
     if (action == OPEN_ACTION_CREATE)
     {
-        if (create_fat32(path, 0, FS_FILE, (boot_sector_t *)data, bdev) < 0)
+        if (create_fat32(path, 0, FS_FILE, (boot_sector_t *)mount->fs_data, mount->vbdev) < 0)
         {
             return NULL;
         }
     }
     else if (action == OPEN_ACTION_CLEAR)
     {
-        if (clear_fat32(path, (boot_sector_t *)data, bdev) < 0)
+        if (clear_fat32(path, (boot_sector_t *)mount->fs_data, mount->vbdev) < 0)
         {
             return NULL;
         }
     }
     
     file_info_t info;
-    if (!stat_fat32(&info, path, (boot_sector_t *)data, bdev))
+    if (!stat_fat32(&info, path, (boot_sector_t *)mount->fs_data, mount->vbdev))
     {
         return NULL;
     }
@@ -1514,64 +1514,66 @@ file_node_t *fat32_open(const char *path, uint8_t action, virtual_blockdev_t *bd
     node->flags = info.flags;
     node->_data = 0; // TODO: maybe cache cluster number here
 
-    return node;
+    node->offset = 0;
+    node->fs = mount->fs;
+    node->mount = mount;
+    strcpy(node->local_path, path);
+
+    return stream_create_file(node, mount);
 }
 
-int fat32_close(file_node_t *node, virtual_blockdev_t *bdev, void *data)
+int fat32_close(stream_t *stream)
 {
-    if (!node)
+    if (!stream || stream->type != STREAM_TYPE_FILE)
     {
         return -RES_EUNKNOWN;
     }
 
-    (void)bdev;
-    (void)data;
-
-    kfree(node);
+    kfree(stream->node);
 
     return 0;
 }
 
-int fat32_read(file_node_t *node, size_t size, uint8_t *buf, virtual_blockdev_t *bdev, void *data)
+int fat32_read(stream_t *stream, size_t size, uint8_t *buf)
 {
-    if (read_fat32(node->local_path, (boot_sector_t *)data, bdev, node->offset, size, buf) < 0)
+    if (read_fat32(stream->node->local_path, (boot_sector_t *)stream->mount->fs_data, stream->mount->vbdev, stream->node->offset, size, buf) < 0)
     {
         return -RES_EUNKNOWN;
     }
 
-    node->offset += size;
+    stream->node->offset += size;
     return 0;
 }
 
-int fat32_write(file_node_t *node, size_t size, const uint8_t *buf, virtual_blockdev_t *bdev, void *data)
+int fat32_write(stream_t *stream, size_t size, const uint8_t *buf)
 {
-    if (write_fat32(node->local_path, (boot_sector_t *)data, bdev, size, buf) < 0)
+    if (write_fat32(stream->node->local_path, (boot_sector_t *)stream->mount->fs_data, stream->mount->vbdev, size, buf) < 0)
     {
         return -RES_EUNKNOWN;
     }
 
-    node->offset += size;
+    stream->node->offset += size;
     return 0;
 }
 
-int fat32_readdir(file_node_t *node, int index, char *path, virtual_blockdev_t *bdev, void *data)
+int fat32_readdir(stream_t *stream, int index, char *path)
 {
     char filename[MAX_PATH];
-    if (readdir_fat32(filename, node->local_path, (size_t)index, (boot_sector_t *)data, bdev) == 0)
+    if (readdir_fat32(filename, stream->node->local_path, (size_t)index, (boot_sector_t *)stream->mount->fs_data, stream->mount->vbdev) == 0)
     {
         return -RES_EUNKNOWN;
     }
 
-    strncpy(path, node->local_path, MAX_PATH);
+    strncpy(path, stream->node->local_path, MAX_PATH);
     size_t len = strlen(path);
     strncpy((char *)((uintptr_t)path + len), filename, MAX_PATH-len);
 
     return 0;
 }
 
-int fat32_delete(file_node_t *node, virtual_blockdev_t *bdev, void *data)
+int fat32_delete(stream_t *stream)
 {
-    if (delete_fat32(node->local_path, (boot_sector_t *)data, bdev) < 0)
+    if (delete_fat32(stream->node->local_path, (boot_sector_t *)stream->mount->fs_data, stream->mount->vbdev) < 0)
     {
         return -RES_EUNKNOWN;
     }

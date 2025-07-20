@@ -86,12 +86,7 @@ char **split_line(char *line)
 
 static bool is_full_path(const char *str)
 {
-    if (!str || !isdigit((unsigned char)str[0]))
-    {
-        return false;
-    }
-
-    return str[1] == ':' && str[2] == '/';
+    return str[0] == '/';
 }
 
 static bool file_exists(const char *path)
@@ -135,12 +130,12 @@ int shell_launch(char **args)
             return 1;
         }
 
-        char *dir = strtok(path_copy, ";");
+        char *dir = strtok(path_copy, ":");
         while (dir != NULL)
         {
             if (!is_full_path(dir))
             {
-                dir = strtok(NULL, ";");
+                dir = strtok(NULL, ":");
                 continue;
             }
 
@@ -157,7 +152,7 @@ int shell_launch(char **args)
 
             free(p);
 
-            dir = strtok(NULL, ";");
+            dir = strtok(NULL, ":");
         }
 
         free(path_copy);
