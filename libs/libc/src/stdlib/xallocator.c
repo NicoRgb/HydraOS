@@ -15,7 +15,8 @@ void *syscall_alloc(void);
 
 typedef struct buddy_header
 {
-    size_t size;
+    uint32_t allocation_size;
+    uint32_t size;
     uint8_t flags;
     struct buddy_header *next;
     struct buddy_header *prev;
@@ -231,6 +232,7 @@ void *buddy_allocator_alloc(size_t size)
         }
     }
 
+    allocation->allocation_size = size;
     return (void *)((uintptr_t)allocation + alignment);
 }
 
@@ -243,6 +245,17 @@ void buddy_allocator_free(void *ptr)
 
     buddy_header_t *buddy = (buddy_header_t *)((uintptr_t)ptr - alignment);
     free_buddy(buddy);
+}
+
+size_t ptr_get_size(void *ptr)
+{
+    if (ptr == NULL)
+    {
+        return 0;
+    }
+
+    buddy_header_t *buddy = (buddy_header_t *)((uintptr_t)ptr - alignment);
+    return buddy->allocation_size;
 }
 
 int kmm_init(size_t initial_size, size_t _alignment)

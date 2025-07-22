@@ -5,7 +5,7 @@
 
 void *malloc(size_t s);
 void free(void *p);
-void *realloc(void *p, size_t old_size, size_t s);
+void *realloc(void *p, size_t s);
 
 char *getenv(const char *name);
 //int setenv(const char *name, const char *value, int overwrite);

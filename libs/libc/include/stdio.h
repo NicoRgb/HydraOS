@@ -19,6 +19,13 @@ extern uint64_t _stderr;
 #define stdout ((FILE *)_stdout)
 #define stderr ((FILE *)_stderr)
 
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
+void fseek(FILE *f, size_t n, int a);
+size_t ftell(FILE *f);
+
 FILE *fopen(const char *s, const char *a);
 int fclose(FILE *f);
 int fgetc(FILE *f);

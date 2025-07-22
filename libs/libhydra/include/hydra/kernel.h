@@ -14,6 +14,7 @@
 #define _SYSCALL_OPEN 7
 #define _SYSCALL_CLOSE 8
 #define _SYSCALL_PIPE 12
+#define _SYSCALL_LSEEK 13
 
 #define RES_SUCCESS 0
 #define RES_INVARG 1
@@ -54,5 +55,6 @@ void *syscall_alloc(void);
 uint64_t syscall_open(const uint8_t *path, uint8_t open_actions);
 void syscall_close(uint64_t stream);
 int syscall_pipe(void);
+size_t syscall_lseek(uint64_t stream, size_t offset, int action);
 
 #endif

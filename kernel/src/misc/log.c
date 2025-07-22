@@ -200,7 +200,7 @@ void __kpanic(const char *file, uint64_t line, const char *msg, ...)
     va_end(args);
 
     klog_raw(LOG_LEVEL_ERROR, "PANIC: The system is unable to continue\n\nInfo:\n - file: %s\n - line: %lld\n\nStack trace:\n", file, line);
-    trace_stack(32);
+    trace_stack(32, NULL);
     klog_raw(LOG_LEVEL_ERROR, "\nError message:\n%s\n", str);
 
     while (1)

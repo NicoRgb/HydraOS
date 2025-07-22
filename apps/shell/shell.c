@@ -69,7 +69,7 @@ char **split_line(char *line)
         if (pos >= bufsize)
         {
             bufsize += TOKEN_BUFFER_SIZE;
-            tokens = realloc(tokens, (bufsize - TOKEN_BUFFER_SIZE) * sizeof(char *), bufsize * sizeof(char *));
+            tokens = realloc(tokens, bufsize * sizeof(char *));
             if (tokens == NULL)
             {
                 fputs("allocation failure", stdout);

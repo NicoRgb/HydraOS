@@ -3,6 +3,7 @@
 #include <kernel/kprintf.h>
 #include <kernel/port.h>
 #include <kernel/proc/task.h>
+#include <kernel/dbg.h>
 
 #define INTERRUPT_GATE 0x8E
 #define INTERRUPT_TRAP 0x8F
@@ -225,6 +226,8 @@ void exception_handler(interrupt_frame_t *frame)
     LOG_ERROR("\n[Registers]\ncs=0x%x rip=0x%x\nrflags=0x%x error=0x%x\nrax=0x%x rcx=0x%x\nrdx=0x%x rsi=0x%x\nrdi=0x%x r8=0x%x\nr9=0x%x r10=0x%x\nr11=0x%x rbp=0x%x\nrsp=0x%x\n",
               frame->cs, frame->rip, frame->rflags, frame->err_code, frame->rax, frame->rcx, frame->rdx,
               frame->rsi, frame->rdi, frame->r8, frame->r9, frame->r10, frame->r11, frame->rsp);
+
+    trace_stack(32, (void *)frame->rsp);
 
     __asm__ volatile("cli");
     __asm__ volatile("hlt");

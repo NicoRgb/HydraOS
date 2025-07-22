@@ -68,3 +68,8 @@ int syscall_pipe(void)
 {
     return syscall(_SYSCALL_PIPE, 0, 0, 0, 0, 0, 0);
 }
+
+size_t syscall_lseek(uint64_t stream, size_t offset, int action)
+{
+    return syscall(_SYSCALL_LSEEK, (uint64_t)stream, (uint64_t)offset, (uint64_t)action, 0, 0, 0);
+}

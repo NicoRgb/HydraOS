@@ -23,6 +23,6 @@ void *memcpy(char *s, const char *ct, size_t n);
 void *memmove(char *s, const char *ct, size_t n);
 int memcmp(const char *cs, const char *ct, size_t n);
 void *memchr(const char *cs, int c, size_t n);
-void *memset(char *s, int c, size_t n);
+void *memset(void *s, int c, size_t n);
 
 #endif

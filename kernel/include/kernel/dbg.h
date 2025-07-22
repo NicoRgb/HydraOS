@@ -4,6 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void trace_stack(uint32_t max_frames);
+void trace_stack(uint32_t max_frames, void *stackframe);
 
 #endif

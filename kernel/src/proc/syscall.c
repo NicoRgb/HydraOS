@@ -316,6 +316,24 @@ int64_t syscall_pipe(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_
     return process_insert_stream(proc, stream);
 }
 
+int64_t syscall_lseek(process_t *proc, int64_t stream, int64_t offset, int64_t action, int64_t, int64_t, int64_t, task_state_t *)
+{
+    stream_t *s = proc->streams[stream];
+    if (!stream)
+    {
+        return 0;
+    }
+
+    if (s->type != STREAM_TYPE_FILE)
+    {
+        return 0;
+    }
+
+    vfs_seek(s, (size_t)offset, (uint8_t)action);
+    
+    return s->node->offset;
+}
+
 extern page_table_t *kernel_pml4;
 
 int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, int64_t arg5, task_state_t *state)
@@ -379,6 +397,9 @@ int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, 
         
     case 12:
         res = syscall_pipe(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
+        break;
+    case 13:
+        res = syscall_lseek(proc, arg0, arg1, arg2, arg3, arg4, arg5, state);
         break;
 
     default:

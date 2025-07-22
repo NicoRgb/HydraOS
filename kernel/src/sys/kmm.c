@@ -324,7 +324,7 @@ void *kmalloc(size_t size)
     if (size >= PAGE_SIZE)
     {
         LOG_WARNING("buddy allocation greather than one page, size %lld", size);
-        trace_stack(32);
+        trace_stack(32, NULL);
     }
 
     void *res = buddy_allocator_alloc(size);

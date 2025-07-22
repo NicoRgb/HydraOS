@@ -15,6 +15,7 @@ mkdir -p /tmp/hydra_root/bin
 mkdir -p /tmp/hydra_root/lib
 mkdir -p /tmp/hydra_root/mod
 mkdir -p /tmp/hydra_root/include
+mkdir -p /tmp/hydra_root/resources
 
 if [[ $HYDRAOS_BOOT_SYSTEM != 'GRUB' ]]; then
     pushd ../bootloader
@@ -42,19 +43,17 @@ pushd ../kernel
     cp build/kernel.elf /tmp/hydra_root/boot/hydrakernel
 popd
 
-pushd ../libc
-    echo "Compiling Libc"
-    make build/libc.a
-    cp build/libc.a /tmp/hydra_root/lib/libc.a
-    cp -r include/* /tmp/hydra_root/include/
-popd
-
-pushd ../libhydra
-	echo "Compiling LibHydra"
-	make build/libhydra.a
-	cp build/libhydra.a /tmp/hydra_root/lib/libhydra.a
-	cp -r include/* /tmp/hydra_root/include/
-popd
+for dir in ../libs/*/; do
+    if [ -d "$dir" ]; then
+        pushd $dir
+            lib=$(basename "$dir")
+            echo "Compiling $lib"
+            make build/$lib.a
+            cp build/$lib.a /tmp/hydra_root/lib/$lib.a
+            cp -r include/* /tmp/hydra_root/include
+        popd
+    fi
+done
 
 for dir in ../apps/*/; do
     if [ -d "$dir" ]; then
@@ -63,6 +62,10 @@ for dir in ../apps/*/; do
             echo "Compiling $app"
             make build/$app ROOT=/tmp/hydra_root/
             cp build/$app /tmp/hydra_root/bin/$app
+
+            if [ -d "resources" ]; then
+                cp -r resources/* /tmp/hydra_root/resources
+            fi
         popd
     fi
 done

@@ -36,10 +36,17 @@ const char *resolve_function_name(uintptr_t addr, const Elf64_Sym *symbols, size
     return NULL;
 }
 
-void trace_stack(uint32_t max_frames)
+void trace_stack(uint32_t max_frames, void *stackframe)
 {
     struct stackframe *stack;
-    __asm__ volatile("movq %%rbp,%0" : "=r"(stack)::);
+    if (!stackframe)
+    {
+        __asm__ volatile("movq %%rbp,%0" : "=r"(stack)::);
+    }
+    else
+    {
+        stack = stackframe;
+    }
 
     for (uint32_t frame = 0; stack && frame < max_frames; frame++)
     {

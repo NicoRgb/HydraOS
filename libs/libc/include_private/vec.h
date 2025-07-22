@@ -45,7 +45,6 @@ typedef struct
         {                                                                                                                               \
             _vec_metadata->capacity += _VEC_CAPACITY_INCREASAE;                                                                         \
             vec_ptr = realloc(vec_ptr - sizeof(vector_metadata_t *),                                                                    \
-                              sizeof((vec_ptr)[0]) * (_vec_metadata->capacity - _VEC_CAPACITY_INCREASAE) + sizeof(vector_metadata_t *), \
                               sizeof((vec_ptr)[0]) * _vec_metadata->capacity + sizeof(vector_metadata_t *));                            \
             _vec_metadata = _vec_get_metadata(vec_ptr);                                                                                 \
         }                                                                                                                               \
