@@ -46,14 +46,14 @@ int main(int argc, char **argv)
     canvas_draw_ellipse(100, 300, 60, 30, 0xFFFF00FF); // Magenta
     canvas_draw_ellipse(250, 300, 30, 60, 0xFF00FFFF); // Cyan
 
-    canvas_icon_t icon = load_png_from_file("/resources/heart.png");
+    canvas_icon_t icon = load_png_from_file("/resources/eye.png");
     if (!icon.pixels)
     {
         fputs("failed to load icon\n", stdout);
         return 1;
     }
 
-    canvas_draw_icon(300, 50, &icon);
+    canvas_draw_icon_scaled(250, 50, 256, 256, &icon);
 
     free_image(&icon);
 

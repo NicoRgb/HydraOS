@@ -49,7 +49,10 @@ static inline void put_pixel_safe(int x, int y, uint32_t color)
         return;
     if (x < 0 || y < 0 || x >= (int)current_context->width || y >= (int)current_context->height)
         return;
-    current_context->framebuffer[y * current_context->width + x] = color;
+    if (((color >> 24) & 0xFF) != 0)
+    {
+        current_context->framebuffer[y * current_context->width + x] = color;
+    }
 }
 
 void canvas_fill(uint32_t color)
@@ -74,11 +77,11 @@ void canvas_draw_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, u
     }
 }
 
-void canvas_draw_circle(uint32_t cx, uint32_t cy, uint32_t radius, uint32_t color)
+void canvas_draw_circle(int cx, int cy, int radius, uint32_t color)
 {
-    uint32_t x = 0;
-    uint32_t y = radius;
-    uint32_t d = 1 - radius;
+    int x = 0;
+    int y = radius;
+    int d = 1 - radius;
 
     while (y >= x)
     {
@@ -104,14 +107,14 @@ void canvas_draw_circle(uint32_t cx, uint32_t cy, uint32_t radius, uint32_t colo
     }
 }
 
-void canvas_draw_ellipse(uint32_t cx, uint32_t cy, uint32_t rx, uint32_t ry, uint32_t color)
+void canvas_draw_ellipse(int cx, int cy, int rx, int ry, uint32_t color)
 {
-    uint32_t x = 0, y = ry;
-    uint32_t rx2 = rx * rx;
-    uint32_t ry2 = ry * ry;
-    uint32_t dx = 2 * ry2 * x;
-    uint32_t dy = 2 * rx2 * y;
-    uint32_t d1 = ry2 - (rx2 * ry) + (0.25 * rx2);
+    int x = 0, y = ry;
+    int rx2 = rx * rx;
+    int ry2 = ry * ry;
+    int dx = 2 * ry2 * x;
+    int dy = 2 * rx2 * y;
+    int d1 = ry2 - (rx2 * ry) + (0.25 * rx2);
 
     while (dx < dy)
     {
@@ -134,7 +137,7 @@ void canvas_draw_ellipse(uint32_t cx, uint32_t cy, uint32_t rx, uint32_t ry, uin
         }
     }
 
-    uint32_t d2 = ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
+    int d2 = ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
     while (y >= 0)
     {
         put_pixel_safe(cx + x, cy + y, color);
@@ -163,7 +166,23 @@ void canvas_draw_icon(uint32_t x, uint32_t y, canvas_icon_t *icon)
     {
         for (uint32_t col = 0; col < icon->width; col++)
         {
-            put_pixel_safe(col, row, icon->pixels[row * icon->width + col]);
+            put_pixel_safe(col + x, row + y, icon->pixels[row * icon->width + col]);
+        }
+    }
+}
+
+void canvas_draw_icon_scaled(uint32_t x, uint32_t y, uint32_t new_width, uint32_t new_height, canvas_icon_t *icon)
+{
+    for (uint32_t dst_row = 0; dst_row < new_height; dst_row++)
+    {
+        uint32_t src_row = (dst_row * icon->height) / new_height;
+
+        for (uint32_t dst_col = 0; dst_col < new_width; dst_col++)
+        {
+            uint32_t src_col = (dst_col * icon->width) / new_width;
+
+            uint32_t color = icon->pixels[src_row * icon->width + src_col];
+            put_pixel_safe(x + dst_col, y + dst_row, color);
         }
     }
 }
