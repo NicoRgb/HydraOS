@@ -98,9 +98,9 @@ virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index)
         return NULL;
     }
 
-    size_t desc_size = sizeof(struct virtq_desc) * queue_size;
-    size_t avail_size = sizeof(struct virtq_avail) + sizeof(uint16_t) * queue_size;
-    size_t used_size = sizeof(struct virtq_used) + sizeof(struct virtq_used_elem) * queue_size;
+    // size_t desc_size = sizeof(struct virtq_desc) * queue_size;
+    // size_t avail_size = sizeof(struct virtq_avail) + sizeof(uint16_t) * queue_size;
+    // size_t used_size = sizeof(struct virtq_used) + sizeof(struct virtq_used_elem) * queue_size;
 
     // TODO: check if sizes fit
 
@@ -200,7 +200,7 @@ KRES virtio_start(virtio_device_t *dev)
     return RES_SUCCESS;
 }
 
-KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len)
+KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len, uint8_t flags, bool wait)
 {
     if (len == 0)
     {
@@ -208,7 +208,6 @@ KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uin
     }
 
     dev->common->queue_select = vq->queue_index;
-    dev->common->queue_enable = 1;
 
     uint16_t size = vq->queue_size;
     uint16_t idx = vq->next_desc_idx;
@@ -217,27 +216,28 @@ KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uin
 
     vq->desc[idx].addr = buf;
     vq->desc[idx].len = len;
-    vq->desc[idx].flags = VIRTQ_DESC_F_NEXT;
-    vq->desc[idx].next = (idx + 1) % size;
+    vq->desc[idx].flags = flags;
+    vq->desc[idx].next = 0;
+
+    __sync_synchronize();
 
     vq->avail->ring[vq->avail->idx % size] = idx;
     vq->avail->idx++;
 
+    __sync_synchronize();
+
     vq->last_used_idx = vq->used->idx;
     vq->next_desc_idx = (idx + 1) % size;
 
-    __sync_synchronize();
-
     *(volatile uint16_t *)(uintptr_t)(dev->notify + dev->notify_off_multiplier * vq->queue_index) = vq->queue_index;
 
-    size_t timeout = 0xFFFFFFFFFFFFFFFF;
-    while (vq->last_used_idx == vq->used->idx && timeout-- > 0);
-
-    if (timeout <= 0)
+    if (!wait)
     {
-        LOG_ERROR("virtio_send timeout");
-        return -RES_TIMEOUT;
+        return RES_SUCCESS;
     }
+
+    while (vq->last_used_idx == vq->used->idx);
+    LOG_DEBUG("waiting on vqueue: %d, %d", vq->last_used_idx, vq->used->idx);
 
     return RES_SUCCESS;
 }
@@ -250,7 +250,6 @@ KRES virtio_send(virtio_device_t *dev, virtqueue_t *vq, uint64_t cmd, uint32_t c
     }
 
     dev->common->queue_select = vq->queue_index;
-    dev->common->queue_enable = 1;
 
     uint16_t size = vq->queue_size;
     uint16_t idx = vq->next_desc_idx;

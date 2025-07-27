@@ -15,7 +15,7 @@ int virtio_entropy_free(device_t *dev)
 int randomize_buffer(uint8_t *data, size_t size, device_t *dev)
 {
     (void)dev;
-    if (virtio_send_buffer(virtio_dev, vq, (uint64_t)data, size) < 0)
+    if (virtio_send_buffer(virtio_dev, vq, (uint64_t)data, size, VIRTQ_DESC_F_WRITE, true) < 0)
     {
         return -RES_EUNKNOWN;
     }

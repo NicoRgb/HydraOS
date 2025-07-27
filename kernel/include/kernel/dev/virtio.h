@@ -22,42 +22,42 @@
 #define PCI_CAP_PTR_OFFSET 0x34
 #define PCI_CAP_ID_VNDR 0x09
 
-// Virtio PCI capability structure (common fields)
-typedef struct __attribute__((packed)) {
-    uint8_t cap_vndr;          // PCI capability ID (0x09)
-    uint8_t cap_next;          // Next capability pointer
-    uint8_t cap_len;           // Capability length
-    uint8_t cfg_type;          // One of VIRTIO_PCI_CAP_*
-    uint8_t bar;               // BAR index
-    uint8_t padding[3];        // Reserved / padding
-    uint32_t offset;           // Offset within BAR
-    uint32_t length;           // Length of the capability
+typedef struct __attribute__((packed))
+{
+    uint8_t cap_vndr;
+    uint8_t cap_next;
+    uint8_t cap_len;
+    uint8_t cfg_type;
+    uint8_t bar;
+    uint8_t padding[3];
+    uint32_t offset;
+    uint32_t length;
 } virtio_pci_cap_t;
 
 typedef struct __attribute__((packed))
 {
-    uint32_t device_feature_select; // Read-write
-    uint32_t device_feature;        // Read-only
-    uint32_t driver_feature_select; // Read-write
-    uint32_t driver_feature;        // Read-write
-    uint16_t config_msix_vector;    // Read-write
-    uint16_t num_queues;            // Read-only
-    uint8_t device_status;          // Read-write
-    uint8_t config_generation;      // Read-only
+    uint32_t device_feature_select;
+    uint32_t device_feature;
+    uint32_t driver_feature_select;
+    uint32_t driver_feature;
+    uint16_t config_msix_vector;
+    uint16_t num_queues;
+    uint8_t device_status;
+    uint8_t config_generation;
 
-    uint16_t queue_select;            // Read-write
-    uint16_t queue_size;              // Read-write
-    uint16_t queue_msix_vector;       // Read-write
-    uint16_t queue_enable;            // Read-write
-    uint16_t queue_notify_off;        // Read-only
-    uint64_t queue_desc;              // Read-write
-    uint64_t queue_driver;            // Read-write
-    uint64_t queue_device;            // Read-write
-    uint16_t queue_notif_config_data; // Read-only
-    uint16_t queue_reset;             // Read-write
+    uint16_t queue_select;
+    uint16_t queue_size;
+    uint16_t queue_msix_vector;
+    uint16_t queue_enable;
+    uint16_t queue_notify_off;
+    uint64_t queue_desc;
+    uint64_t queue_driver;
+    uint64_t queue_device;
+    uint16_t queue_notif_config_data;
+    uint16_t queue_reset;
 
-    uint16_t admin_queue_index; // Read-only
-    uint16_t admin_queue_num;   // Read-only
+    uint16_t admin_queue_index;
+    uint16_t admin_queue_num;
 } virtio_pci_common_cfg_t;
 
 typedef struct __attribute__((packed))
@@ -126,8 +126,13 @@ virtio_device_t *virtio_init(pci_device_t *pci_dev, uint32_t (*feature_negotiate
 KRES virtio_start(virtio_device_t *dev);
 virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index);
 
-KRES virtqueue_send_buffer(virtio_device_t *dev, virtqueue_t *vq, void *phys_buf, size_t len, bool write);
-KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len);
+KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len, uint8_t flags, bool wait);
 KRES virtio_send(virtio_device_t *dev, virtqueue_t *vq, uint64_t cmd, uint32_t cmd_len, uint64_t resp, uint32_t resp_len);
+
+#define VIRTIO_DISABLE_FEATURE(res, feat) \
+    if (features & feat)                  \
+    {                                     \
+        res = res & ~feat;                \
+    }
 
 #endif

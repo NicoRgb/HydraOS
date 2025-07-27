@@ -227,7 +227,7 @@ void exception_handler(interrupt_frame_t *frame)
               frame->cs, frame->rip, frame->rflags, frame->err_code, frame->rax, frame->rcx, frame->rdx,
               frame->rsi, frame->rdi, frame->r8, frame->r9, frame->r10, frame->r11, frame->rsp);
 
-    trace_stack(32, (void *)frame->rsp);
+    //trace_stack(32, (void *)frame->rsp);
 
     __asm__ volatile("cli");
     __asm__ volatile("hlt");

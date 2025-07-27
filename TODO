@@ -1,9 +1,0 @@
-- update install script for bootloader dependencies
-- docs
-- memory managment
-- full 64 bit address range
-- device managment
-- more logging
-- kernel logging before device initialization
-- add gnuefi build to setup script
-- kernel modules

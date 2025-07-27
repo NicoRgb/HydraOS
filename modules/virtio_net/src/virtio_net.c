@@ -39,6 +39,8 @@
 #define VIRTIO_NET_F_STANDBY 62
 #define VIRTIO_NET_F_SPEED_DUPLEX 63
 
+#define VIRTIO_NET_HDR_GSO_NONE 0
+
 typedef struct
 {
     uint8_t mac[6];
@@ -63,6 +65,8 @@ typedef struct
     uint16_t csum_offset;
     uint16_t num_buffers;
 } virtio_net_hdr_t;
+
+#define MAX_PACKET_SIZE 1514
 
 static virtio_device_t *virtio_dev = NULL;
 static virtio_net_config_t *device_cfg = NULL;
@@ -91,24 +95,67 @@ static uint32_t virtio_video_feature_negotiate(uint32_t features, virtio_device_
         return 0;
     }
 
-    if (features & VIRTIO_NET_F_STATUS)
+    // TODO: support these flag
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_STATUS);
+
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_TSO4);
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_TSO6);
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_UFO);
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_USO4);
+    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_USO6);
+    
+    return res;
+}
+
+int virtio_net_send(size_t size, const uint8_t *data, device_t *dev)
+{
+    (void)dev;
+
+    if (size > MAX_PACKET_SIZE || !data)
     {
-        res = res & ~VIRTIO_NET_F_STATUS; // TODO: support this flag
+        return -RES_INVARG;
     }
 
-    return res;
+    uintptr_t buf = (uintptr_t)pmm_alloc();
+    if (buf == 0)
+    {
+        return -RES_NOMEM;
+    }
+
+    memcpy((void *)(buf + sizeof(virtio_net_hdr_t)), data, size);
+
+    virtio_net_hdr_t *header = (virtio_net_hdr_t *)buf;
+    memset(header, 0, sizeof(virtio_net_hdr_t));
+    header->flags = 0;
+    header->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+
+    size_t buffer_size = size + sizeof(virtio_net_hdr_t);
+    if (virtio_send_buffer(virtio_dev, transmit_queue, buf, buffer_size, 0, true) < 0)
+    {
+        LOG_ERROR("Failed to send virtio buffer");
+        return -RES_EUNKNOWN;
+    }
+
+    return RES_SUCCESS;
 }
 
 extern driver_t virtio_net_driver;
 device_ops_t virtio_net_ops = {
     .free = &virtio_net_free,
+    .send = &virtio_net_send,
 };
+
+static void virtio_net_irq(interrupt_frame_t *frame)
+{
+    LOG_INFO("interrupt");
+    (void)frame;
+    uint8_t isr_status = *(volatile uint8_t *)virtio_dev->isr;
+    (void)isr_status;
+}
 
 device_t *virtio_net_create(size_t index, pci_device_t *pci_dev)
 {
     (void)index;
-
-    LOG_WARNING("Net Create");
 
     if (virtio_dev != NULL)
     {
@@ -127,6 +174,9 @@ device_t *virtio_net_create(size_t index, pci_device_t *pci_dev)
     device->pci_dev = pci_dev;
 
     pci_enable_device(pci_dev);
+
+    register_interrupt_handler(42, &virtio_net_irq);
+    register_interrupt_handler(43, &virtio_net_irq);
 
     virtio_dev = virtio_init(pci_dev, virtio_video_feature_negotiate);
     if (!virtio_dev)
@@ -152,7 +202,27 @@ device_t *virtio_net_create(size_t index, pci_device_t *pci_dev)
 
     virtio_start(virtio_dev);
 
-    LOG_INFO("Device MAC Address %d%d%d%d%d%d", device_cfg->mac[0], device_cfg->mac[1], device_cfg->mac[2], device_cfg->mac[3], device_cfg->mac[4], device_cfg->mac[5]);
+    LOG_INFO("Device MAC Address %x:%x:%x:%x:%x:%x", device_cfg->mac[0], device_cfg->mac[1], device_cfg->mac[2], device_cfg->mac[3], device_cfg->mac[4], device_cfg->mac[5]);
+
+    // populate receive queue
+    for (int i = 0; i < 4; i++)
+    {
+        uintptr_t buf = (uintptr_t)pmm_alloc();
+        if (buf == 0)
+        {
+            return NULL;
+        }
+
+        for (int j = 0; j < 2; j++)
+        {
+            size_t buffer_size = MAX_PACKET_SIZE + sizeof(virtio_net_hdr_t);
+            if (virtio_send_buffer(virtio_dev, receive_queue, buf + (j * buffer_size), buffer_size, VIRTQ_DESC_F_WRITE, false) < 0)
+            {
+                LOG_ERROR("Failed to send virtio buffer");
+                return NULL;
+            }
+        }
+    }
 
     return device;
 }

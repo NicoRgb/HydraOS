@@ -38,6 +38,13 @@ And run it using:
 bash scripts/run.sh
 ```
 
+## Debugging
+
+In order to use GDB to debug the kernel use the provided gdb script:
+```bash
+gdb -x debug.gdb
+```
+
 ## Screenshots
 
 In the future there will be screenshots of the OS here.

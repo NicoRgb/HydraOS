@@ -110,6 +110,10 @@ typedef struct device_ops
     int (*get_display_rect)(video_rect_t *rect, int display, device_t *dev);
     uint32_t *(*create_framebuffer)(video_rect_t *rect, int display, device_t *dev);
     int (*update_display)(video_rect_t *rect, void *framebuffer, device_t *dev);
+
+    // net
+    int (*send)(size_t size, const uint8_t *data, device_t *dev);
+    int (*recv)(size_t size, uint8_t *data, device_t *dev);
 } device_ops_t;
 
 typedef struct driver

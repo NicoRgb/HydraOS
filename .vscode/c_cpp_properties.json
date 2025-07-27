@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/libs/libcanvas/include"
+                "${workspaceFolder}/libs/*/include",
+                "${workspaceFolder}/modules/*/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
