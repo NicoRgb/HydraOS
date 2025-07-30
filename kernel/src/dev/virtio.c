@@ -236,7 +236,11 @@ KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uin
         return RES_SUCCESS;
     }
 
-    while (vq->last_used_idx == vq->used->idx);
+    while (vq->last_used_idx == vq->used->idx)
+    {
+        __asm__ volatile("hlt");
+    }
+
     LOG_DEBUG("waiting on vqueue: %d, %d", vq->last_used_idx, vq->used->idx);
 
     return RES_SUCCESS;

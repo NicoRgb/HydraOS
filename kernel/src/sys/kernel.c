@@ -400,7 +400,7 @@ void kmain()
     size_t payload_len = ETH_MIN_FRAME_SIZE - 14; // 14 bytes Ethernet header
     memset(frame + 14, 'A', payload_len);
 
-    net->ops->send(ETH_MIN_FRAME_SIZE, frame, net);
+    //net->ops->send(ETH_MIN_FRAME_SIZE, frame, net);
 
     LOG_INFO("starting sysinit...");
     process_t *proc = process_create("/bin/sysinit");

@@ -86,7 +86,7 @@ struct virtq_desc
 struct virtq_avail
 {
     uint16_t flags;
-    uint16_t idx;
+    volatile uint16_t idx;
     uint16_t ring[];
 } __attribute__((packed));
 
@@ -99,7 +99,7 @@ struct virtq_used_elem
 struct virtq_used
 {
     uint16_t flags;
-    uint16_t idx;
+    volatile uint16_t idx;
     struct virtq_used_elem ring[];
 } __attribute__((packed));
 
@@ -128,11 +128,5 @@ virtqueue_t *virtio_setup_queue(virtio_device_t *device, int queue_index);
 
 KRES virtio_send_buffer(virtio_device_t *dev, virtqueue_t *vq, uint64_t buf, uint32_t len, uint8_t flags, bool wait);
 KRES virtio_send(virtio_device_t *dev, virtqueue_t *vq, uint64_t cmd, uint32_t cmd_len, uint64_t resp, uint32_t resp_len);
-
-#define VIRTIO_DISABLE_FEATURE(res, feat) \
-    if (features & feat)                  \
-    {                                     \
-        res = res & ~feat;                \
-    }
 
 #endif

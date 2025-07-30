@@ -81,12 +81,20 @@ int virtio_net_free(device_t *dev)
 
 static uint32_t virtio_video_feature_negotiate(uint32_t features, virtio_device_t *device, bool *abort)
 {
-    uint32_t res = features;
+    uint32_t res = 0;
 
-    if ((features & VIRTIO_NET_F_MQ) || (features & VIRTIO_NET_F_RSS))
+    if (features & VIRTIO_NET_F_RSS)
     {
         virtio_net_config_t *device_cfg = (virtio_net_config_t *)device->device_cfg;
         device_cfg->max_virtqueue_pairs = 1;
+        res |= VIRTIO_NET_F_MQ;
+    }
+
+    if (features & VIRTIO_NET_F_RSS)
+    {
+        virtio_net_config_t *device_cfg = (virtio_net_config_t *)device->device_cfg;
+        device_cfg->max_virtqueue_pairs = 1;
+        res |= VIRTIO_NET_F_RSS;
     }
 
     if (!(features & VIRTIO_NET_F_MAC) || !(features & VIRTIO_NET_F_MRG_RXBUF)) // required
@@ -95,14 +103,8 @@ static uint32_t virtio_video_feature_negotiate(uint32_t features, virtio_device_
         return 0;
     }
 
-    // TODO: support these flag
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_STATUS);
-
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_TSO4);
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_TSO6);
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_UFO);
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_USO4);
-    VIRTIO_DISABLE_FEATURE(res, VIRTIO_NET_F_GUEST_USO6);
+    res |= VIRTIO_NET_F_MAC;
+    res |= VIRTIO_NET_F_MRG_RXBUF;
     
     return res;
 }
