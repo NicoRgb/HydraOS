@@ -49,10 +49,35 @@ static inline void put_pixel_safe(int x, int y, uint32_t color)
         return;
     if (x < 0 || y < 0 || x >= (int)current_context->width || y >= (int)current_context->height)
         return;
-    if (((color >> 24) & 0xFF) != 0)
+
+    uint8_t alpha = (color >> 24) & 0xFF;
+    if (alpha == 0)
+    {
+        return;
+    }
+
+    if (alpha == 255)
     {
         current_context->framebuffer[y * current_context->width + x] = color;
+        return;
     }
+
+    uint32_t dst = current_context->framebuffer[y * current_context->width + x];
+
+    uint8_t src_r = (color >> 16) & 0xFF;
+    uint8_t src_g = (color >> 8) & 0xFF;
+    uint8_t src_b = color & 0xFF;
+
+    uint8_t dst_r = (dst >> 16) & 0xFF;
+    uint8_t dst_g = (dst >> 8) & 0xFF;
+    uint8_t dst_b = dst & 0xFF;
+
+    uint8_t out_r = (src_r * alpha + dst_r * (255 - alpha)) / 255;
+    uint8_t out_g = (src_g * alpha + dst_g * (255 - alpha)) / 255;
+    uint8_t out_b = (src_b * alpha + dst_b * (255 - alpha)) / 255;
+
+    current_context->framebuffer[y * current_context->width + x] =
+        (0xFF << 24) | (out_r << 16) | (out_g << 8) | out_b;
 }
 
 void canvas_fill(uint32_t color)

@@ -367,6 +367,25 @@ vfs_mount_resolve_t vfs_resolve_real_mount_and_local_path(const char *path)
     char *tok = strtok(path_copy, "/");
     while (tok)
     {
+        if (strcmp(tok, ".") == 0)
+        {
+            tok = strtok(NULL, "/");
+            consumed_length += 3;
+            continue;
+        }
+        else if (strcmp(tok, "..") == 0)
+        {
+            tok = strtok(NULL, "/");
+            consumed_length += 4;
+            current = current->parent;
+            if (!current)
+            {
+                result.mount = NULL;
+                return result;
+            }
+            continue;
+        }
+
         bool found = false;
         for (size_t i = 0; i < cvector_size(current->children); i++)
         {

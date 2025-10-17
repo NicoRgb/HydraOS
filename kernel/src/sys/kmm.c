@@ -202,8 +202,6 @@ size_t align_forward_size(size_t ptr, size_t align)
 
 int kmm_expand(size_t expand_size)
 {
-    LOG_INFO("allocator expanded");
-
     expand_size = align_forward_size(expand_size, PAGE_SIZE);
     if (expand_size < EXPAND_PAGE_NUM * PAGE_SIZE)
     {
@@ -321,11 +319,11 @@ int kmm_init(page_table_t *kernel_pml4, uint64_t base, size_t initial_size, size
 
 void *kmalloc(size_t size)
 {
-    if (size >= PAGE_SIZE)
-    {
-        LOG_WARNING("buddy allocation greather than one page, size %lld", size);
-        trace_stack(32, NULL);
-    }
+    //if (size >= PAGE_SIZE)
+    //{
+    //    LOG_WARNING("buddy allocation greather than one page, size %lld", size);
+    //    trace_stack(32, NULL);
+    //}
 
     void *res = buddy_allocator_alloc(size);
     if (res == NULL)

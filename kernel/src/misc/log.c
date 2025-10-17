@@ -42,6 +42,13 @@ KRES klog_write_e9(char c, log_level_t level)
     return RES_SUCCESS;
 }
 
+KRES klog_write_null(char c, log_level_t level)
+{
+    (void)level;
+    (void)c;
+    return RES_SUCCESS;
+}
+
 static size_t col = 0;
 static size_t row = 0;
 static const size_t NUM_COLS = 80;
@@ -200,7 +207,7 @@ void __kpanic(const char *file, uint64_t line, const char *msg, ...)
     va_end(args);
 
     klog_raw(LOG_LEVEL_ERROR, "PANIC: The system is unable to continue\n\nInfo:\n - file: %s\n - line: %lld\n\nStack trace:\n", file, line);
-    trace_stack(32, NULL);
+    //trace_stack(32, NULL);
     klog_raw(LOG_LEVEL_ERROR, "\nError message:\n%s\n", str);
 
     while (1)

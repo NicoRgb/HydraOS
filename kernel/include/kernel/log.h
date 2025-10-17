@@ -16,6 +16,7 @@ typedef enum
 KRES klog_write_e9_and_vga(char c, log_level_t level);
 KRES klog_write_e9(char c, log_level_t level);
 KRES klog_write_vga(char c, log_level_t level);
+KRES klog_write_null(char c, log_level_t level);
 
 KRES klog_init(KRES (*write_func)(char c, log_level_t level));
 KRES klog(log_level_t level, const char *fmt, ...);

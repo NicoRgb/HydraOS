@@ -11,9 +11,9 @@
 
 /*
  kernel:    0x100000
- heap:      0x200000
  process:   0x400000
  stack:     0x800000
+ heap:      0x1000000
 */
 
 #define PROCESS_VADDR 0x400000
@@ -21,10 +21,10 @@
 #define PROCESS_STACK_VADDR_BASE 0x800000
 #define PROCESS_STACK_SIZE 4096 * 64
 
-#define PROCESS_HEAP_VADDR_BASE 0x200000
+#define PROCESS_HEAP_VADDR_BASE 0x1000000
 
 #define PROCESS_MAX_STREAMS 8
-#define PROCESS_MAX_HEAP_PAGES 1024
+#define PROCESS_MAX_HEAP_PAGES 1024 * 16
 
 typedef struct
 {

@@ -276,9 +276,9 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
     {
         PANIC("failed to initialize pit");
     }
-
+    
     enable_interrupts();
-
+    
     LOG_INFO("early initialization complete");
 }
 

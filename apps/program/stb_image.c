@@ -44,6 +44,8 @@ canvas_icon_t load_png_from_file(const char *path)
         return result;
     }
 
+    printf("size: %ld, top: %p\n", size, (uint8_t *)((uintptr_t)buffer + size));
+
     fread(buffer, 1, size, f);
     fclose(f);
 
