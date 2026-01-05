@@ -8,10 +8,10 @@
                 "${workspaceFolder}/modules/*/include"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/clang",
+            "compilerPath": "/home/ubuntu/opt/cross/bin/x86_64-elf-gcc",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64",
+            "intelliSenseMode": "gcc-x64",
             "compilerArgs": [
                 "-ffreestanding"
             ]

@@ -437,7 +437,7 @@ static void read_cluster(uint32_t cluster_num, uint8_t *buf, boot_sector_t *boot
     }
 
     size_t data_start = boot_sector->bpb.reserved_sector_count + boot_sector->bpb.num_FATs * fat_size;
-    size_t lba = data_start + cluster_num - 2;
+    size_t lba = data_start + (cluster_num - 2) * boot_sector->bpb.sectors_per_cluster;
 
     read_fat_device(dev, lba, boot_sector->bpb.sectors_per_cluster, buf);
 }
@@ -451,7 +451,7 @@ static void write_cluster(uint32_t cluster_num, const uint8_t *buf, boot_sector_
     }
 
     size_t data_start = boot_sector->bpb.reserved_sector_count + boot_sector->bpb.num_FATs * fat_size;
-    size_t lba = data_start + cluster_num - 2;
+    size_t lba = data_start + (cluster_num - 2) * boot_sector->bpb.sectors_per_cluster;
 
     write_fat_device(dev, lba, boot_sector->bpb.sectors_per_cluster, buf);
 }
@@ -504,6 +504,7 @@ static directory_entry_t *find_entry_by_name(const char *name, uint32_t director
         {
             if (direntries[i].name[0] == 0x00)
             {
+                LOG_ERROR("failed");
                 kfree(cluster_buf);
                 return NULL;
             }

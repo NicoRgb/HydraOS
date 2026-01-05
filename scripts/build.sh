@@ -80,7 +80,7 @@ menuentry "HydraOS" {
 }
 EOF
 
-dd if=/dev/zero of=../hydraos.img bs=512 count=131072
+dd if=/dev/zero of=../hydraos.img bs=1M count=1024
 fdisk ../hydraos.img << EOF
 o
 n
@@ -97,7 +97,7 @@ sudo losetup /dev/loop1 ../hydraos.img -o 1048576
 
 sudo mkdosfs -F32 -f 2 /dev/loop1
 sudo mount /dev/loop1 /mnt
-sudo cp -rf /tmp/hydra_root/* /mnt
+sudo cp -rf /tmp/hydra_root/* /mnt | true
 if [[ $HYDRAOS_BOOT_SYSTEM == 'UEFI' ]]; then
     source uefifs.sh
 elif [[ $HYDRAOS_BOOT_SYSTEM == 'GRUB' ]]; then
