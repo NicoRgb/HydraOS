@@ -1,3 +1,0 @@
-[submodule "extern/gnu-efi"]
-	path = extern/gnu-efi
-	url = https://github.com/vathpela/gnu-efi

@@ -5,8 +5,6 @@ set -e
 DIR="`dirname "${BASH_SOURCE[0]}"`"
 cd "$DIR" || exit
 
-HYDRAOS_BOOT_SYSTEM='GRUB'
-
 # rm -rf /tmp/hydra_root | true
 
 mkdir -p /tmp/hydra_root/
@@ -16,13 +14,6 @@ mkdir -p /tmp/hydra_root/lib
 mkdir -p /tmp/hydra_root/mod
 mkdir -p /tmp/hydra_root/include
 mkdir -p /tmp/hydra_root/resources
-
-if [[ $HYDRAOS_BOOT_SYSTEM != 'GRUB' ]]; then
-    pushd ../bootloader
-        echo "Compiling Bootloader"
-        make all
-    popd
-fi
 
 cp -r ../kernel/include/* /tmp/hydra_root/include/
 
@@ -98,14 +89,9 @@ sudo losetup /dev/loop1 ../hydraos.img -o 1048576
 sudo mkdosfs -F32 -f 2 /dev/loop1
 sudo mount /dev/loop1 /mnt
 sudo cp -rf /tmp/hydra_root/* /mnt | true
-if [[ $HYDRAOS_BOOT_SYSTEM == 'UEFI' ]]; then
-    source uefifs.sh
-elif [[ $HYDRAOS_BOOT_SYSTEM == 'GRUB' ]]; then
-    sudo grub-install --target=i386-pc --root-directory=/mnt --no-floppy --modules="normal part_msdos multiboot2" /dev/loop0
-else
-    sudo dd if=../bootloader/build/bootsector.bin of=/dev/loop0 conv=notrunc bs=446 count=1
-    sudo dd if=../bootloader/build/bootloader.bin of=/dev/loop0 conv=notrunc bs=512 seek=1
-fi
+
+sudo grub-install --target=i386-pc --root-directory=/mnt --no-floppy --modules="normal part_msdos multiboot2" /dev/loop0
+
 sudo umount /mnt
 sudo losetup -d /dev/loop0
 sudo losetup -d /dev/loop1
