@@ -46,9 +46,13 @@ int canvas_switch(canvas_context_t *context)
 static inline void put_pixel_safe(int x, int y, uint32_t color)
 {
     if (!current_context)
+    {
         return;
+    }
     if (x < 0 || y < 0 || x >= (int)current_context->width || y >= (int)current_context->height)
+    {
         return;
+    }
 
     uint8_t alpha = (color >> 24) & 0xFF;
     if (alpha == 0)

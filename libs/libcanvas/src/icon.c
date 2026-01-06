@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG // Disable all formats except PNG
-#define STBI_NO_STDIO // We'll use memory loading, not fopen
+#define STBI_ONLY_PNG
+#define STBI_NO_STDIO
 #define STBI_NO_FAILURE_STRINGS
 #define STBI_NO_THREAD_LOCALS
 #define STBI_NO_HDR
@@ -16,7 +16,7 @@
     {               \
     }
 
-#include "stb_image.h"
+#include <canvas/stb_image.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -31,7 +31,9 @@ canvas_icon_t load_png_from_file(const char *path)
 
     FILE *f = fopen(path, "rb");
     if (!f)
+    {
         return result;
+    }
 
     fseek(f, 0, SEEK_END);
     long size = ftell(f);

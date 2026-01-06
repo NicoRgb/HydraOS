@@ -40,7 +40,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    canvas_draw_icon_scaled(0, 0, 512, 512, &icon);
+    canvas_draw_icon_scaled(icon.width / 2, 0, rect.height, rect.height, &icon);
 
     free_image(&icon);
 

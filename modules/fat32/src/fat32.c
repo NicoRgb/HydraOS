@@ -504,7 +504,6 @@ static directory_entry_t *find_entry_by_name(const char *name, uint32_t director
         {
             if (direntries[i].name[0] == 0x00)
             {
-                LOG_ERROR("failed");
                 kfree(cluster_buf);
                 return NULL;
             }

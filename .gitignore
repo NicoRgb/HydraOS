@@ -3,4 +3,5 @@
 *.iso
 *.img
 *.log
+*.dat
 .vscode/
