@@ -9,6 +9,8 @@
 #include <kernel/isr.h>
 #include <kernel/kmm.h>
 
+extern page_table_t *kernel_pml4;
+
 static void *process_get_pointer(process_t *proc, uintptr_t vaddr)
 {
     size_t offset = (uint64_t)vaddr % PAGE_SIZE;
@@ -21,12 +23,36 @@ static void *process_get_pointer(process_t *proc, uintptr_t vaddr)
     return (void *)(t + offset);
 }
 
+// can only used once at a time
+static void *process_mirror_buffer(process_t *proc, uintptr_t vaddr, size_t size) // mirrors a user space mapped buffer into the kernels temporary mapping space
+{
+    size_t offset = (uint64_t)vaddr % PAGE_SIZE;
+    size_t pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    for (size_t i = 0; i < pages; i++)
+    {
+        uintptr_t phys = pml4_get_phys(proc->pml4, (void *)(((vaddr / PAGE_SIZE) + i) * PAGE_SIZE), true);
+        if (phys == 0)
+        {
+            return NULL;
+        }
+
+        int status = pml4_map(kernel_pml4, (void *)(0xFFFFFFFFFFC00000 + i * PAGE_SIZE), (void *)phys, PAGE_PRESENT | PAGE_WRITABLE);
+        if (status < 0)
+        {
+            PANIC("failed to map page\n%p->%p\nstatus:%i", (void *)(0xFFFFFFFFFFC00000 + i * PAGE_SIZE), (void *)((uintptr_t)phys + i * PAGE_SIZE), status);
+        }
+    }
+
+    return (void *)(0xFFFFFFFFFFC00000 + offset);
+}
+
 #define DRIVER_TYPE_CHARDEV 0
 #define DRIVER_TYPE_INPUTDEV 1
 
 int64_t syscall_read(process_t *proc, int64_t stream, int64_t data, int64_t size, int64_t, int64_t, int64_t, task_state_t *)
 {
-    uint8_t *buf = (uint8_t *)process_get_pointer(proc, data);
+    uint8_t *buf = (uint8_t *)process_mirror_buffer(proc, data, size);
     if (!buf)
     {
         return -RES_EUNKNOWN;
@@ -44,7 +70,7 @@ int64_t syscall_read(process_t *proc, int64_t stream, int64_t data, int64_t size
 
 int64_t syscall_write(process_t *proc, int64_t stream, int64_t data, int64_t size, int64_t, int64_t, int64_t, task_state_t *)
 {
-    uint8_t *buf = (uint8_t *)process_get_pointer(proc, data);
+    uint8_t *buf = (uint8_t *)process_mirror_buffer(proc, data, size);
     if (!buf)
     {
         return -RES_EUNKNOWN;
@@ -78,8 +104,13 @@ int64_t syscall_fork(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_
     return fork->pid;
 }
 
-int64_t syscall_exit(process_t *proc, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
+int64_t syscall_exit(process_t *proc, int64_t code, int64_t, int64_t, int64_t, int64_t, int64_t, task_state_t *)
 {
+    if (code != 0)
+    {
+        LOG_WARNING("process exited with code %i", code);
+    }
+
     process_unregister(proc);
     process_free(proc);
     execute_next_process();
@@ -333,8 +364,6 @@ int64_t syscall_lseek(process_t *proc, int64_t stream, int64_t offset, int64_t a
     
     return s->node->offset;
 }
-
-extern page_table_t *kernel_pml4;
 
 int64_t syscall_handler(uint64_t num, int64_t arg0, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, int64_t arg5, task_state_t *state)
 {

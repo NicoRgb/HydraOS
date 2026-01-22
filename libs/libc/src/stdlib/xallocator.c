@@ -191,7 +191,7 @@ size_t align_forward_size(size_t ptr, size_t align)
     return p;
 }
 
-int kmm_expand(size_t expand_size)
+int allocator_expand(size_t expand_size)
 {
     expand_size = align_forward_size(expand_size, PAGE_SIZE);
 
@@ -207,7 +207,7 @@ int kmm_expand(size_t expand_size)
     tail = get_next_buddy(new_node);
 
     insert_free_buddy(new_node);
-    buddy_coalesce(head);
+    buddy_coalesce(new_node);
 
     return 0;
 }
@@ -219,7 +219,7 @@ void *buddy_allocator_alloc(size_t size)
 
     if (allocation == NULL)
     {
-        if (kmm_expand(adjusted_size) < 0)
+        if (allocator_expand(adjusted_size) < 0)
         {
             return NULL;
         }
@@ -258,7 +258,7 @@ size_t ptr_get_size(void *ptr)
     return buddy->allocation_size;
 }
 
-int kmm_init(size_t initial_size, size_t _alignment)
+int allocator_init(size_t initial_size, size_t _alignment)
 {
     if ((initial_size & (initial_size - 1)) != 0 || (_alignment & (_alignment - 1)) != 0)
     {

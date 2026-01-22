@@ -7,6 +7,16 @@
 extern int __kernel_start;
 extern int __kernel_end;
 
+void *memset_new(void *dest, register int val, register size_t len)
+{
+    register unsigned char *ptr = (unsigned char *)dest;
+    while (len-- > 0)
+    {
+        *ptr++ = val;
+    }
+    return dest;
+}
+
 static uint64_t current_pid = 0;
 process_t *process_create(const char *path)
 {
@@ -16,9 +26,7 @@ process_t *process_create(const char *path)
         return NULL;
     }
 
-    proc->num_heap_pages = 0;
-
-    memset(proc, 0, sizeof(process_t));
+    memset_new(proc, 0, sizeof(process_t));
 
     proc->elf = elf_load(path);
     if (!proc->elf)

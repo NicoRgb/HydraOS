@@ -227,7 +227,7 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
         PANIC("failed to initialize segmentation");
     }
 
-    if (IS_ERROR(pmm_init(boot_info.memory_map, boot_info.num_mmap_entries, boot_info.total_memory))) // TODO: 64 bit address range
+    if (IS_ERROR(pmm_init(boot_info.memory_map, boot_info.num_mmap_entries, boot_info.total_memory)))
     {
         PANIC("failed to initialize page allocation");
     }
@@ -257,7 +257,7 @@ void early_init(uint32_t multiboot_signature, uint64_t multiboot_information_str
         PANIC("failed to switch pml4");
     }
 
-    if (IS_ERROR(kmm_init(kernel_pml4, 0x1200000, 32 * PAGE_SIZE, 16))) // TODO: make dynamicly grow
+    if (IS_ERROR(kmm_init(kernel_pml4, 0xFFFF800000200000, 32 * PAGE_SIZE, 16)))
     {
         PANIC("failed to initialize kernel heap");
     }
@@ -368,39 +368,6 @@ void kmain()
         }
     }
     while (dev);
-
-    device_t *net = get_device_by_type(DEVICE_NET, 0);
-    if (!net)
-    {
-        LOG_WARNING("no networking device found");
-    }
-
-#define ETH_ALEN 6
-#define ETH_TYPE_IP 0x0800
-#define ETH_MIN_FRAME_SIZE 60  // excluding CRC (usually 64 with CRC)
-
-    uint8_t *frame = kmalloc(ETH_MIN_FRAME_SIZE);
-
-    // Destination MAC: broadcast
-    memset(frame, 0xFF, ETH_ALEN);
-
-    // Source MAC: 02:00:00:00:00:01 (locally administered address)
-    frame[6] = 0x00;
-    frame[7] = 0x15;
-    frame[8] = 0x5d;
-    frame[9] = 0xbe;
-    frame[10] = 0xf4;
-    frame[11] = 0x7b;
-
-    // Ethertype: IPv4 (0x0800)
-    frame[12] = (ETH_TYPE_IP >> 8) & 0xFF;
-    frame[13] = ETH_TYPE_IP & 0xFF;
-
-    // Payload: fill with dummy data (e.g., 'A's) up to minimum Ethernet frame size
-    size_t payload_len = ETH_MIN_FRAME_SIZE - 14; // 14 bytes Ethernet header
-    memset(frame + 14, 'A', payload_len);
-
-    //net->ops->send(ETH_MIN_FRAME_SIZE, frame, net);
 
     LOG_INFO("starting sysinit...");
     process_t *proc = process_create("/bin/sysinit");

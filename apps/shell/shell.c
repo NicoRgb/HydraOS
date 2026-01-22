@@ -214,6 +214,13 @@ int shell_launch(char **args)
     }
     while (syscall_ping(pid) == pid || c != 0);
 
+    c = fgetc((FILE *)fd);
+    while (c != 0)
+    {
+        fputc(c, stdout);
+        c = fgetc((FILE *)fd);
+    }
+
     syscall_close((uint64_t)fd);
 
     return pid;

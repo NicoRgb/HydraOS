@@ -119,6 +119,8 @@ buddy_header_t *split_buddy(buddy_header_t *buddy, size_t target_size)
         buddy_header_t *split = get_next_buddy(buddy);
         split->size = half;
         split->flags = 0;
+        split->next = NULL;
+        split->prev = NULL;
 
         insert_free_buddy(split);
     }
@@ -216,7 +218,7 @@ int kmm_expand(size_t expand_size)
             return -RES_NOMEM;
         }
 
-        int status = pml4_map(heap_pml4, (void *)(tail + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
+        int status = pml4_map(heap_pml4, (void *)((uintptr_t)tail + i * PAGE_SIZE), page, PAGE_PRESENT | PAGE_WRITABLE);
         if (status < 0)
         {
             return status;
@@ -230,7 +232,7 @@ int kmm_expand(size_t expand_size)
     tail = get_next_buddy(new_node);
 
     insert_free_buddy(new_node);
-    buddy_coalesce(head);
+    buddy_coalesce(new_node);
 
     return 0;
 }

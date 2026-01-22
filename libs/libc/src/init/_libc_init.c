@@ -9,7 +9,7 @@ extern uint64_t _stderr;
 
 extern cvector(char *) environment_args;
 
-int kmm_init(size_t initial_size, size_t _alignment);
+int allocator_init(size_t initial_size, size_t _alignment);
 
 void syscall_exit(uint32_t result);
 
@@ -24,7 +24,7 @@ void initialize_standard_library(int argc, char **argv, int envc, char **envp)
 
     environment_args = CVECTOR;
 
-    if (kmm_init(8, 16) < 0)
+    if (allocator_init(8, 16) < 0)
     {
         syscall_exit(1);
     }
