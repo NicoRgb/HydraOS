@@ -33,14 +33,14 @@ int main(int argc, char **argv)
 
     canvas_fill(0xFF202020);
 
-    canvas_icon_t icon = load_png_from_file("/resources/logo-small.png");
+    canvas_icon_t icon = load_png_from_file("/resources/logo.png");
     if (!icon.pixels)
     {
         fputs("failed to load icon\n", stdout);
         return 1;
     }
 
-    canvas_draw_icon_scaled(icon.width / 2, 0, rect.height, rect.height, &icon);
+    canvas_draw_icon_scaled((rect.width - rect.height) / 2, 0, rect.height, rect.height, &icon);
 
     free_image(&icon);
 

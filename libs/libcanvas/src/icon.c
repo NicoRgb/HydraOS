@@ -12,15 +12,24 @@
 #define STBI_NO_BMP
 #define STBI_NO_JPEG
 
-#define STBI_ASSERT \
-    {               \
-    }
+void syscall_exit(unsigned int result);
+#include <stdio.h>
+
+#define STBI_ASSERT(expr)                                                   \
+    do {                                                                     \
+        if (!(expr)) {                                                       \
+            printf(                                                          \
+                "STBI_ASSERT failed: %s\n"                                   \
+                "  at %s:%d (%s)\n",                                          \
+                #expr, __FILE__, __LINE__, __func__);                         \
+            syscall_exit(1);                                                  \
+        }                                                                    \
+    } while (0)
 
 #include <canvas/stb_image.h>
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include <canvas/canvas.h>
 
@@ -45,8 +54,6 @@ canvas_icon_t load_png_from_file(const char *path)
         fclose(f);
         return result;
     }
-
-    printf("size: %ld, top: %p\n", size, (uint8_t *)((uintptr_t)buffer + size));
 
     fread(buffer, 1, size, f);
     fclose(f);

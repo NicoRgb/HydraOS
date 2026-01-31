@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-void buddy_allocator_free(void *ptr);
+size_t free_memory(void *ptr);
 
 void free(void *p)
 {
@@ -9,5 +9,5 @@ void free(void *p)
         return;
     }
 
-    buddy_allocator_free(p);
+    free_memory(p);
 }
